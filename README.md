@@ -1,48 +1,97 @@
-# strk20-treasury
+# Airlock
 
-**Private treasury operations on Starknet.** A treasury whose members can verify solvency without seeing every transaction, and whose operators can spend only inside a policy they cannot exceed.
+**One-click privacy from any chain.** Step in on one chain, the door seals behind you, step out on another. No on-chain link between the two sides.
 
-Built for the [STRK20 Private Sprint](https://github.com/starkience/strk20-hackathon) on the Starknet privacy pool.
+Built on the [STRK20](https://strk20-by-example.org/what-is-strk20) privacy pool for the [Private Sprint](https://github.com/starkience/strk20-hackathon) — [RFP-09, cross-chain privacy hub](https://strk20.starknet.io/rfp/cross-chain-privacy-hub).
 
-> **Status: early.** Sprint runs 14–31 August 2026. This README describes what is being built; see [What works today](#what-works-today) for what is actually running.
+> **Status: early.** Sprint runs 14–31 August 2026. This README states the design and the honest privacy claim. See [What works today](#what-works-today) for what is actually running.
 
-## The problem
+## The idea
 
-An on-chain treasury today forces a bad trade. Run it transparently and you publish your runway, your payroll, your counterparties, and every position you hold — to competitors and to anyone deciding whether to negotiate with you. Run it through a multisig with off-chain accounting and your own members lose the ability to verify you are solvent.
+> "I have 10 ETH on Arbitrum. I want to send 5 ETH to a fresh address without anyone linking the two."
 
-Neither half of that trade is necessary. Solvency is a fact that can be proven without disclosing its components.
+Most crypto users are not on Starknet, and shouldn't have to be. Airlock lets someone connect the wallet they already have, move value into the STRK20 privacy pool, hold it privately, and withdraw to a **different chain** — without installing a Starknet wallet, holding STRK, or thinking about Starknet at all. Starknet is the engine, not the destination.
 
-## What this is
-
-Three things over shielded balances in the STRK20 pool:
-
-- **Scoped spending policy.** A manager can deploy up to a capped amount into whitelisted protocols. A trader can trade but not withdraw. Authority is bounded by the policy the treasury enforces, not by the trust placed in a key. A compromised operator key still cannot spend outside its scope.
-- **Private execution.** Deployments and transfers run through the pool, so counterparties, recipients and internal allocation are not published as a side effect of operating.
-- **Provable solvency.** Members and auditors can verify the treasury holds what it claims, and that spending stayed inside policy, without a per-transaction ledger being made public.
+The name is the mechanism. You enter, the door seals, a different door opens elsewhere. There is no moment when both doors are open at once.
 
 ## What is and isn't private
 
-Being precise about this matters more than it sounds; overclaiming is the standard way privacy projects mislead their users.
+Being precise here matters more than it sounds. Overclaiming is how privacy tools mislead the people who most need them to work.
 
 | Public | Private |
 |---|---|
-| Deposits into the pool: address, token, amount | Internal transfers: parties and amounts |
-| Withdrawals: destination and amount | Which deposit a given withdrawal came from |
-| That the treasury interacted with a protocol, and the amounts | Which operator initiated it, and the treasury's total position |
-| Policy rules themselves, where published for verifiability | Allocation between line items |
+| The deposit leg: source address, token, amount | Movement inside the pool: parties, amounts, token |
+| The withdrawal leg: destination address, token, amount | Which deposit a given withdrawal came from |
+| That an address interacted with the pool, and when | Which notes were spent (nullifiers are unlinkable without the viewing key) |
 
-Deployments into public venues route through shared anonymizer contracts, so **amounts and timing remain visible**. The anonymity comes from the shared address and the mixing set. A distinctive amount executed shortly after a distinctive deposit is correlatable. This project claims identity privacy for treasury operations; it does not claim amount privacy for on-venue actions.
+**Airlock claims one thing: that the deposit side and the withdrawal side are not linkable on-chain.** It does not hide that you used a privacy pool, and it does not hide the amounts at the edges.
 
-## Approach
+### The timing caveat, stated plainly
 
-| Layer | Route |
+The protocol's own documentation names rapid in-and-out sequences as a real weakness: opening a channel and withdrawing in tight succession can link a recipient to their public activity, and distinctive amounts moved quickly weaken the anonymity set.
+
+So a two-minute round trip is **not** as private as the interface would like to imply. Airlock treats the dwell time between entering and leaving as part of the product rather than as latency: before you withdraw, it shows you the current anonymity set and flags timing and amount patterns that would make your two sides correlatable. A tool that lets you leave immediately while telling you it's private is worse than no tool.
+
+## Design
+
+The protocol constrains this more than it first appears, and the architecture below follows from those constraints rather than from preference.
+
+| Constraint | Consequence |
 |---|---|
-| Private transfers, shield, unshield | [Starknet Wallet API](https://strk20-by-example.org/starknet-wallet-api/overview) via `starknet.js` `WalletAccountV6` — the wallet holds the viewing key and generates proofs; this app never sees either |
-| Deployment into whitelisted protocols | An app-specific [`privacy_invoke`](https://strk20-by-example.org/helpers/privacy-invoke) anonymizer contract, starting from the Vesu lending reference helper |
-| Swaps | [AVNU private swaps](https://strk20-by-example.org/starknet-wallet-api/avnu-private-swaps) (`@avnu/avnu-sdk`), paymaster-relayed |
-| Policy enforcement | Cairo, enforced at the anonymizer boundary rather than in the frontend |
+| You cannot register a viewing key on another user's behalf | A Starknet account is derived deterministically from the signature the user gives on their own chain, and registers itself |
+| At most one `InvokeExternal` per pool transaction | The round trip cannot be atomic; it is a resumable multi-transaction job with off-chain orchestration |
+| Deposits are screened on-chain by the protocol | Screening rejection is a first-class user-facing state, not an error toast |
 
-Policy is enforced on-chain at the point the pool calls the helper. A frontend that forgets a check, or an operator who bypasses the frontend entirely, still cannot execute outside policy.
+**Flow**
+
+1. **Sign once** on the source chain (MetaMask). The Starknet account key and viewing key are derived from that single signature. Only the read-only viewing key is ever persisted.
+2. **Register** the derived account (`SetViewingKey`), gas sponsored so the user never holds STRK.
+3. **Bridge in** over Circle CCTP; an inbound anonymizer binds the attested cross-chain message to a private note in one transaction.
+4. **Hold.** Anonymity set and correlation risk are surfaced here.
+5. **Withdraw to a different chain** through the outbound anonymizer.
+
+**Stack**
+
+| Layer | Choice |
+|---|---|
+| Cross-chain value movement | [`privacy-bridge`](https://github.com/starkware-libs/privacy-bridge) (`bridge-core`, Apache-2.0) over Circle CCTP |
+| Pool actions from the app | [Starknet Wallet API](https://strk20-by-example.org/starknet-wallet-api/overview) via `starknet.js` `WalletAccountV6` — the wallet holds the viewing key and proves; this app never sees either |
+| `PrivacyHub` orchestration | An app-specific [`privacy_invoke`](https://strk20-by-example.org/helpers/privacy-invoke) anonymizer contract in Cairo |
+
+## Scope
+
+Deliberately one lane, taken all the way to mainnet, rather than four half-finished ones.
+
+**In:** one EVM source chain (Base or Arbitrum), USDC, deposit on chain A → withdraw on chain B, timing and anonymity-set disclosure.
+
+**Out for now:** Solana, arbitrary ERC-20s, StarkGate/LayerSwap/Orbiter wrappers, anything requiring sub-accounts or confidential compute (not shipped).
+
+## What works today
+
+Nothing is deployed yet. This list is the honest answer to "can I use this", and is updated as pieces land.
+
+- [ ] Deterministic Starknet account derived from an EVM signature
+- [ ] Registration with sponsored gas
+- [ ] Bridge in: CCTP → private note
+- [ ] Shielded balance view
+- [ ] `PrivacyHub` anonymizer contract
+- [ ] Anonymity-set and timing disclosure
+- [ ] Withdraw to a different chain
+- [ ] Mainnet
+
+## Running locally
+
+```bash
+npm install
+npm run dev
+```
+
+Requires a privacy-enabled Starknet wallet (Ready). **Pin the versions** — STRK20 support landed in `starknet` 10.4.0 and ships on the npm `next` tag; a bare install resolves to 10.0.x, which contains none of the STRK20 API.
+
+```bash
+npm install starknet@^10.4.0
+npm install @starknet-io/get-starknet-discovery@6.0.2 @starknet-io/get-starknet-wallet-standard@6.0.2
+```
 
 ## Network
 
@@ -53,41 +102,12 @@ Policy is enforced on-chain at the point the pool calls the helper. A frontend t
 
 Deployed contract addresses will be listed here and in `strk20.json` as they land.
 
-## What works today
-
-Nothing is deployed yet. This section is updated as pieces land, and is the honest answer to "can I use this".
-
-- [ ] Wallet connection and shielded balance read
-- [ ] Private transfer between treasury members
-- [ ] Policy contract: caps and protocol whitelist
-- [ ] Anonymizer helper for whitelisted deployment
-- [ ] Solvency proof and verifier
-- [ ] Mainnet deployment
-
-## Running locally
-
-```bash
-npm install
-npm run dev
-```
-
-Requires a privacy-enabled Starknet wallet (Ready). Note the version pins — STRK20 support landed in `starknet` 10.4.0 and ships on the npm `next` tag; a bare install resolves to 10.0.x, which has none of the STRK20 API.
-
-```bash
-npm install starknet@^10.4.0
-npm install @starknet-io/get-starknet-discovery@6.0.2 @starknet-io/get-starknet-wallet-standard@6.0.2
-```
-
-## Prior work
-
-The policy-enforcement model here follows [tollgate](https://github.com/kenkomu/tollgate), an enforcement layer for autonomous agent spending built on Arc, where a compromised agent key still cannot spend outside its policy. This applies that idea to a treasury, over shielded balances.
-
 ## References
 
-- [STRK20 by example](https://strk20-by-example.org/what-is-strk20)
-- [Privacy SDK](https://github.com/starkware-libs/starknet-privacy)
-- [Awesome STRK20](https://github.com/Akashneelesh/awesome-strk20)
-- [STRK20 starter kit](https://github.com/Akashneelesh/strk20-starter-kit)
+- [STRK20 by example](https://strk20-by-example.org/what-is-strk20) — the pool, notes and nullifiers, viewing keys, anonymizer contracts
+- [starknet-privacy](https://github.com/starkware-libs/starknet-privacy) — pool contracts, TypeScript SDK, proving service
+- [privacy-bridge](https://github.com/starkware-libs/privacy-bridge) — EVM ↔ pool value movement over CCTP
+- [Awesome STRK20](https://github.com/Akashneelesh/awesome-strk20) — SDKs, helper contracts, proof-of-concept apps
 
 ## License
 
