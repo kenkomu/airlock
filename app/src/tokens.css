@@ -1,0 +1,115 @@
+/* Airlock design tokens.
+ *
+ * Derived from the ui-ux-pro-max "Modern Dark" style with two deliberate
+ * overrides, recorded here because they are load-bearing rather than taste:
+ *
+ *  1. Type is IBM Plex Sans/Mono, not Orbitron. A sci-fi display face on a tool
+ *     that moves real money reads as a toy and costs credibility.
+ *  2. Amber is NOT the brand colour. Airlock's core feature is telling users
+ *     honestly when a transfer leaks. Amber has to mean "this leaks" everywhere,
+ *     so the accent is a cold instrument cyan instead.
+ *
+ * Semantic colours are separate from the accent and never decorative:
+ *   sealed  — the two sides of a transfer cannot be linked
+ *   leak    — something correlatable (amount, timing, denomination)
+ *   blocked — refused or failed
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+:root {
+  /* Ground. Never pure #000 — it smears on OLED and kills depth layering. */
+  --bg: #0b0f14;
+  --surface: #121821;
+  --surface-2: #1a222d;
+  --surface-3: #212b38;
+
+  --border: #26313f;
+  --border-soft: #1d2530;
+
+  --text: #e6edf3;
+  --text-2: #9aaab8;
+  --text-3: #6b7c8c;
+
+  /* Instrument cyan. Cold, technical, and distinct from every semantic state. */
+  --accent: #26b6cf;
+  --accent-dim: #1a8298;
+  --accent-wash: #0f2b32;
+
+  /* Semantic — meaning, not decoration. */
+  --sealed: #46b978;
+  --sealed-wash: #10281c;
+  --leak: #d99a2b;
+  --leak-wash: #2b2110;
+  --blocked: #e0574c;
+  --blocked-wash: #2c1512;
+
+  --sans: 'IBM Plex Sans', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* Density 7/10 — standard-to-dense. This is an operations surface. */
+  --s1: 4px;
+  --s2: 8px;
+  --s3: 12px;
+  --s4: 16px;
+  --s5: 24px;
+  --s6: 32px;
+  --s7: 48px;
+
+  --r-sm: 4px;
+  --r: 8px;
+  --r-lg: 12px;
+
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.28);
+
+  /* 150–300ms per the interaction rules. */
+  --t: 180ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 15px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Digits that sit in columns must not shift width as values update. */
+.mono,
+code,
+kbd {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+
+button {
+  font-family: inherit;
+  font-size: inherit;
+  cursor: pointer;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--r-sm);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
