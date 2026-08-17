@@ -596,18 +596,6 @@ tr:last-child td {
 }
 
 /* ---------- route selector ---------- */
-.route {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  align-items: end;
-  gap: var(--s3);
-}
-.route-leg {
-  display: flex;
-  flex-direction: column;
-  gap: var(--s2);
-  min-width: 0;
-}
 .select {
   min-height: 44px;
   width: 100%;
@@ -628,55 +616,8 @@ tr:last-child td {
   border-color: var(--accent);
   outline: none;
 }
-.route-swap {
-  width: 44px;
-  height: 44px;
-  display: grid;
-  place-items: center;
-  font-size: 1.05rem;
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  border-radius: var(--r);
-  color: var(--text-2);
-  transition: background var(--t), color var(--t), border-color var(--t),
-    transform var(--t);
-}
-.route-swap:hover {
-  background: var(--surface-3);
-  color: var(--accent);
-  border-color: var(--accent-dim);
-  transform: rotate(180deg);
-}
-.route-path {
-  display: flex;
-  align-items: center;
-  gap: var(--s2);
-  flex-wrap: wrap;
-  font-size: 0.82rem;
-  color: var(--text-3);
-}
 
 /* ---------- amount ---------- */
-.amount-wrap {
-  position: relative;
-  display: flex;
-  align-items: center;
-}
-.input-amount {
-  font-size: 1.35rem;
-  font-weight: 500;
-  min-height: 54px;
-  padding-right: 4.5rem;
-  letter-spacing: -0.01em;
-}
-.amount-unit {
-  position: absolute;
-  right: var(--s3);
-  font-size: 0.78rem;
-  color: var(--text-3);
-  pointer-events: none;
-  letter-spacing: 0.06em;
-}
 .chip-on {
   background: var(--accent-wash);
   border-color: var(--accent);
@@ -902,14 +843,202 @@ tr:last-child td {
   .seg {
     grid-template-columns: repeat(2, 1fr);
   }
-  .route {
-    grid-template-columns: 1fr;
-  }
-  .route-swap {
-    justify-self: center;
-    transform: rotate(90deg);
-  }
-  .route-swap:hover {
-    transform: rotate(270deg);
-  }
+      }
+
+/* ============================================================
+   Swap-card idiom — From card / circular seam / To card
+   The structure shipped bridges converged on. Familiarity is a
+   usability property when a mistake costs money.
+   ============================================================ */
+
+.sr-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.swapcard {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: var(--s4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s3);
+}
+.swapcard-out {
+  background: var(--bg);
+}
+.swapcard-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s3);
+}
+.swapcard-tag {
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.11em;
+  color: var(--text-3);
+  font-weight: 600;
+}
+
+/* Chain picker reads as a token pill, not a form control. */
+.chain-pick {
+  appearance: none;
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  min-height: 38px;
+  padding: 0 var(--s4) 0 var(--s3);
+  cursor: pointer;
+  transition: border-color var(--t), background var(--t);
+}
+.chain-pick:hover {
+  border-color: var(--accent-dim);
+  background: var(--surface-3);
+}
+.chain-pick:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+
+/* The amount dominates its card — the one number that matters most. */
+.bignum {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s3);
+}
+.bignum-input {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font-size: clamp(1.9rem, 5vw, 2.6rem);
+  font-weight: 500;
+  letter-spacing: -0.03em;
+  padding: 0;
+  line-height: 1.1;
+}
+.bignum-input:focus {
+  outline: none;
+}
+.bignum-input::placeholder {
+  color: var(--text-3);
+}
+.bignum-static {
+  flex: 1;
+  font-size: clamp(1.9rem, 5vw, 2.6rem);
+  font-weight: 500;
+  letter-spacing: -0.03em;
+  color: var(--text);
+  line-height: 1.1;
+}
+.bignum-out .bignum-static {
+  color: var(--accent);
+}
+.bignum-unit {
+  font-size: 0.8rem;
+  color: var(--text-3);
+  letter-spacing: 0.06em;
+  flex: 0 0 auto;
+}
+.err {
+  color: var(--blocked);
+}
+
+/* Circular control straddling the seam between the two cards. */
+.seam {
+  display: grid;
+  place-items: center;
+  height: 0;
+  position: relative;
+  z-index: 1;
+}
+.seam-btn {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  font-size: 1.1rem;
+  border-radius: 999px;
+  background: var(--surface-3);
+  border: 3px solid var(--surface);
+  color: var(--accent);
+  transition: transform var(--t), background var(--t);
+}
+.seam-btn:hover {
+  background: var(--accent);
+  color: #04191d;
+  transform: rotate(180deg);
+}
+
+.quick-l {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-3);
+  font-weight: 600;
+  align-self: center;
+  margin-right: var(--s1);
+}
+.held {
+  color: var(--text-2);
+}
+
+/* ---------- privacy controls group ---------- */
+.controls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s4);
+  padding: var(--s4);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--r);
+  background: var(--surface-2);
+}
+.toggle-h {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  font-weight: 600;
+}
+
+/* ---------- route preview ---------- */
+.preview {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: var(--s3);
+  margin: 0;
+  padding: var(--s3) 0;
+  border-top: 1px solid var(--border-soft);
+  border-bottom: 1px solid var(--border-soft);
+}
+.preview > div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.preview dt {
+  display: flex;
+  align-items: center;
+  gap: var(--s1);
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-3);
+  font-weight: 600;
+}
+.preview dd {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--text);
 }
