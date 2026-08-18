@@ -84,26 +84,6 @@
   cursor: not-allowed;
 }
 
-/* ---------- hero ---------- */
-.hero {
-  text-align: center;
-  padding: var(--s5) 0 var(--s6);
-}
-.hero h1 {
-  font-size: clamp(1.6rem, 3.4vw, 2.3rem);
-  line-height: 1.18;
-  letter-spacing: -0.02em;
-  font-weight: 600;
-  margin: 0 auto var(--s3);
-  max-width: 24ch;
-  text-wrap: balance;
-}
-.hero-sub {
-  color: var(--text-2);
-  max-width: 62ch;
-  margin: 0 auto var(--s5);
-}
-
 .seal {
   margin: 0;
 }
@@ -143,12 +123,6 @@
 }
 
 /* ---------- layout ---------- */
-.grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr));
-  gap: var(--s4);
-  margin-bottom: var(--s4);
-}
 
 /* ---------- cards ---------- */
 .card {
@@ -160,9 +134,6 @@
   display: flex;
   flex-direction: column;
   gap: var(--s4);
-}
-.card-wide {
-  grid-column: 1 / -1;
 }
 .card-h {
   display: flex;
@@ -421,14 +392,6 @@ p {
   flex: 0 0 auto;
 }
 
-/* ---------- legs ---------- */
-.legs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--s2);
-  min-height: 34px;
-  align-items: center;
-}
 .leg {
   padding: 5px 11px;
   border-radius: var(--r-sm);
@@ -437,38 +400,6 @@ p {
   color: var(--accent);
   font-size: 0.85rem;
   font-weight: 500;
-}
-.leg-change {
-  background: var(--surface-2);
-  border-color: var(--border);
-  color: var(--text-3);
-}
-.leg-raw {
-  background: var(--leak-wash);
-  border-color: var(--leak);
-  color: var(--leak);
-}
-
-.ledger {
-  display: flex;
-  flex-direction: column;
-  border: 1px solid var(--border-soft);
-  border-radius: var(--r);
-  overflow: hidden;
-}
-.ledger-row {
-  display: flex;
-  justify-content: space-between;
-  gap: var(--s3);
-  padding: var(--s2) var(--s3);
-  font-size: 0.85rem;
-  border-bottom: 1px solid var(--border-soft);
-}
-.ledger-row:last-child {
-  border-bottom: none;
-}
-.ledger-muted {
-  color: var(--text-3);
 }
 
 /* ---------- table ---------- */
@@ -596,26 +527,6 @@ tr:last-child td {
 }
 
 /* ---------- route selector ---------- */
-.select {
-  min-height: 44px;
-  width: 100%;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: var(--r);
-  color: var(--text);
-  padding: 0 var(--s3);
-  font-family: inherit;
-  font-size: 0.95rem;
-  cursor: pointer;
-  transition: border-color var(--t);
-}
-.select:hover {
-  border-color: var(--accent-dim);
-}
-.select:focus {
-  border-color: var(--accent);
-  outline: none;
-}
 
 /* ---------- amount ---------- */
 .chip-on {
@@ -668,21 +579,6 @@ tr:last-child td {
 }
 
 /* ---------- estimate strip ---------- */
-.est {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--s3);
-  padding: var(--s3);
-  background: var(--surface-2);
-  border: 1px solid var(--border-soft);
-  border-radius: var(--r);
-  font-size: 0.84rem;
-  color: var(--text-2);
-  line-height: 1.5;
-}
-.est strong {
-  color: var(--text);
-}
 
 .btn-lg {
   min-height: 50px;
@@ -872,12 +768,6 @@ tr:last-child td {
 .swapcard-out {
   background: var(--bg);
 }
-.swapcard-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--s3);
-}
 .swapcard-tag {
   font-size: 0.66rem;
   text-transform: uppercase;
@@ -887,28 +777,6 @@ tr:last-child td {
 }
 
 /* Chain picker reads as a token pill, not a form control. */
-.chain-pick {
-  appearance: none;
-  background: var(--surface-3);
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  color: var(--text);
-  font-family: inherit;
-  font-size: 0.9rem;
-  font-weight: 600;
-  min-height: 38px;
-  padding: 0 var(--s4) 0 var(--s3);
-  cursor: pointer;
-  transition: border-color var(--t), background var(--t);
-}
-.chain-pick:hover {
-  border-color: var(--accent-dim);
-  background: var(--surface-3);
-}
-.chain-pick:focus {
-  border-color: var(--accent);
-  outline: none;
-}
 
 /* The amount dominates its card — the one number that matters most. */
 .bignum {
@@ -1041,4 +909,357 @@ tr:last-child td {
   margin: 0;
   font-size: 0.88rem;
   color: var(--text);
+}
+
+/* ============================================================
+   Depth and hierarchy pass.
+   Flat dark surfaces at one elevation read as a wireframe: every
+   region is equally loud, so nothing directs the eye. Three fixes,
+   all cheap — an ambient ground, a hairline of light on the top
+   edge of each card, and stripping card chrome off the reference
+   material so the app itself is the only thing in a box.
+   ============================================================ */
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(880px 520px at 16% -10%, rgba(38, 182, 207, 0.1), transparent 62%),
+    radial-gradient(720px 460px at 90% 2%, rgba(70, 185, 120, 0.05), transparent 60%);
+}
+.shell {
+  position: relative;
+  z-index: 1;
+}
+
+/* The hairline is what separates "surface" from "flat fill". */
+.card {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.45), 0 14px 34px -20px rgba(0, 0, 0, 0.9),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+/* The transfer card is the app. It gets the only real elevation on the page. */
+.card-action {
+  border-color: #2d3c4c;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.5), 0 26px 60px -26px rgba(0, 0, 0, 1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+.card-h-note {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ---------- lede (replaces the full-width hero) ----------
+   Left-aligned and short. A centred billboard pushed the working app
+   below the fold, which is a bad trade on a tool people are here to use. */
+.lede {
+  padding: var(--s5) 0 var(--s6);
+  max-width: 60ch;
+}
+.lede h1 {
+  font-size: clamp(1.45rem, 2.7vw, 1.95rem);
+  line-height: 1.2;
+  letter-spacing: -0.022em;
+  font-weight: 600;
+  margin: var(--s3) 0 var(--s2);
+  text-wrap: balance;
+}
+.lede-sub {
+  color: var(--text-2);
+  font-size: 0.94rem;
+  margin: 0;
+}
+
+/* ---------- main two-column layout ----------
+   align-items:start, because stretched grid rows were leaving a
+   200px void under the shorter column. */
+.grid-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1.02fr) minmax(0, 1fr);
+  gap: var(--s4);
+  align-items: start;
+  margin-bottom: 0;
+}
+.col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s4);
+  min-width: 0;
+}
+@media (max-width: 980px) {
+  .grid-main {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ---------- chain picker ----------
+   A native <select> laid transparently over a styled face: the flat text
+   pill it replaced gave no signal that it could be opened at all. */
+.picker {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s2);
+  flex: 0 0 auto;
+  min-height: 40px;
+  padding: 0 10px 0 6px;
+  border-radius: 999px;
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+  font-weight: 600;
+  font-size: 0.92rem;
+  transition: border-color var(--t), background var(--t);
+}
+.picker:hover {
+  border-color: var(--accent-dim);
+  background: #27333f;
+}
+.picker:has(.picker-native:focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.picker-name {
+  white-space: nowrap;
+}
+.picker-chev {
+  font-size: 0.85rem;
+  color: var(--text-3);
+  flex: 0 0 auto;
+}
+.picker-native {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  border: 0;
+  appearance: none;
+  cursor: pointer;
+}
+
+/* Amount and picker on one line — the arrangement every shipped bridge uses. */
+.swapcard-row {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+}
+.swapcard-row .bignum {
+  flex: 1;
+  min-width: 0;
+}
+.swapcard {
+  gap: var(--s2);
+}
+.swapcard-tag {
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.11em;
+  color: var(--text-3);
+  font-weight: 600;
+}
+
+/* ---------- denomination chips ----------
+   Equal-width and on one line. Nine chips wrapping put "1000" alone on a
+   second row, which read as a layout accident rather than a ladder. */
+.quick {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+  flex-wrap: nowrap;
+  margin-top: var(--s1);
+}
+.quick-l {
+  margin: 0;
+  align-self: flex-start;
+}
+.quick-row {
+  display: flex;
+  gap: 5px;
+}
+.chip {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 30px;
+  padding: 0 2px;
+  font-size: 0.76rem;
+  border-radius: var(--r-sm);
+}
+
+/* ---------- receive breakdown ----------
+   Grouped, and visually unlike the input chips above it: they are a control,
+   this is a result, and giving both the same pill made them look interchangeable. */
+.split {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: var(--s1);
+}
+.split-l {
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.11em;
+  color: var(--text-3);
+  font-weight: 600;
+}
+.split-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  align-items: center;
+}
+.split-note {
+  margin-top: var(--s1);
+}
+.leg {
+  padding: 3px 9px;
+  border-radius: var(--r-sm);
+  background: rgba(38, 182, 207, 0.09);
+  border: 1px solid rgba(38, 182, 207, 0.26);
+  color: var(--accent);
+  font-size: 0.79rem;
+  font-weight: 500;
+}
+.leg-x {
+  font-style: normal;
+  font-size: 0.72rem;
+  opacity: 0.6;
+  margin-left: 3px;
+}
+.leg-held {
+  background: var(--surface-2);
+  border-color: var(--border);
+  color: var(--text-3);
+}
+
+/* ---------- route preview ---------- */
+.route {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.84rem;
+  white-space: nowrap;
+}
+.route i {
+  font-style: normal;
+  color: var(--text-3);
+}
+.route-pool {
+  color: var(--accent);
+  font-weight: 600;
+}
+.route svg {
+  flex: 0 0 auto;
+}
+
+/* ---------- reference band ----------
+   No card chrome. Five identical boxes made the page read as documentation
+   with a form embedded in it; this is documentation that knows it is secondary. */
+.ref {
+  margin-top: var(--s7);
+  padding-top: var(--s5);
+  border-top: 1px solid var(--border-soft);
+}
+.ref-h {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--text-3);
+  font-weight: 600;
+  margin: 0 0 var(--s4);
+}
+.ref-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  gap: var(--s6);
+  align-items: start;
+}
+.ref-block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s3);
+  min-width: 0;
+}
+.ref-block h3 {
+  margin: 0;
+  font-size: 0.94rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+@media (max-width: 900px) {
+  .ref-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.ref .steps {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s2);
+}
+.ref .step {
+  padding: var(--s3);
+  background: rgba(255, 255, 255, 0.018);
+  border-color: var(--border-soft);
+}
+.step h4 {
+  grid-area: title;
+  margin: 0;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+.ref .step p {
+  font-size: 0.78rem;
+}
+
+/* ---------- balance pass ----------
+   The anonymity panel spans the page, so its two halves sit side by side
+   instead of stacking into a narrow column. */
+.card-anon {
+  margin-top: var(--s4);
+}
+.anon-body {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  gap: var(--s5);
+  align-items: start;
+}
+@media (max-width: 820px) {
+  .anon-body {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* The amount owns its unit: the input is sized to its content, so "USDC"
+   stays next to the number and the chain pill is pushed to the far edge. */
+.swapcard-row .bignum {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+.swapcard-row .bignum-input {
+  flex: 0 1 auto;
+  max-width: 100%;
+}
+.swapcard-row .picker {
+  margin-left: auto;
+}
+
+/* Route needs more of the row than the two numeric columns beside it. */
+.preview {
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr) minmax(0, 1fr);
+}
+/* Wrap rather than clip: at 390px the nowrap route was cutting the
+   destination chain off entirely, which is the one thing it exists to show. */
+.route {
+  flex-wrap: wrap;
+  white-space: normal;
+}
+@media (max-width: 640px) {
+  .preview {
+    grid-template-columns: 1fr 1fr;
+  }
+  .preview > div:first-child {
+    grid-column: 1 / -1;
+  }
 }

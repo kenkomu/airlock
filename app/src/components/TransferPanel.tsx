@@ -19,7 +19,8 @@ import { CHAINS, byId, roundTripEstimate } from '../lib/chains';
 import { LADDER, planBuckets } from '../lib/buckets';
 import { REST_PRESETS } from '../lib/exposure';
 import type { BucketPlan } from '../lib/buckets';
-import { IconSwap, IconClock, IconWallet, IconLayers } from './Icons';
+import { IconSwap, IconWallet, IconChevron } from './Icons';
+import { ChainMark, UsdcMark } from './Marks';
 
 export interface TransferState {
   fromId: number;
@@ -32,6 +33,58 @@ export interface TransferState {
 
 interface Props {
   onChange: (s: TransferState) => void;
+}
+
+/* A native <select> kept for keyboard and mobile behaviour, laid transparently
+   over a styled face. Rebuilding the listbox by hand would cost accessibility
+   for cosmetics; this keeps both. */
+function ChainPicker({
+  id,
+  label,
+  value,
+  disabledId,
+  onPick,
+}: {
+  id: string;
+  label: string;
+  value: number;
+  disabledId: number;
+  onPick: (id: number) => void;
+}) {
+  const chain = byId(value);
+  return (
+    <div className="picker">
+      <ChainMark id={chain.id} size={22} />
+      <span className="picker-name">{chain.name}</span>
+      <IconChevron className="picker-chev" />
+      <label className="sr-label" htmlFor={id}>
+        {label}
+      </label>
+      <select
+        id={id}
+        className="picker-native"
+        value={value}
+        onChange={(e) => onPick(Number(e.target.value))}
+      >
+        {CHAINS.map((c) => (
+          <option key={c.id} value={c.id} disabled={c.id === disabledId}>
+            {c.name}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
+/* Legs come out largest-first, so equal denominations are already adjacent.
+   Collapsing them matters: "10 x 2" is a fact, "10 10" is two things to count. */
+function groupLegs(legs: number[]): { d: number; n: number }[] {
+  return legs.reduce<{ d: number; n: number }[]>((acc, d) => {
+    const last = acc[acc.length - 1];
+    if (last && last.d === d) last.n += 1;
+    else acc.push({ d, n: 1 });
+    return acc;
+  }, []);
 }
 
 export function TransferPanel({ onChange }: Props) {
@@ -51,14 +104,7 @@ export function TransferPanel({ onChange }: Props) {
   const [lo, hi] = roundTripEstimate(from, to);
 
   useEffect(() => {
-    onChange({
-      fromId,
-      toId,
-      amount: valid ? amount : 0,
-      bucketing,
-      restMinutes,
-      plan,
-    });
+    onChange({ fromId, toId, amount: valid ? amount : 0, bucketing, restMinutes, plan });
   }, [fromId, toId, amount, valid, bucketing, restMinutes, plan, onChange]);
 
   const swap = () => {
@@ -71,51 +117,50 @@ export function TransferPanel({ onChange }: Props) {
   const showError = touched && !valid && raw.trim() !== '';
 
   const received = bucketing ? plan.moved : valid ? amount : 0;
+  const groups = groupLegs(plan.legs);
 
   return (
     <section className="card card-action" aria-labelledby="tx-h">
       <header className="card-h">
         <h2 id="tx-h">Move funds privately</h2>
-        <span className="card-h-note">USDC</span>
+        <span className="card-h-note">
+          <UsdcMark size={16} /> USDC
+        </span>
       </header>
 
       {/* ---- From ---- */}
       <div className="swapcard">
-        <div className="swapcard-top">
-          <label className="sr-label" htmlFor="from-chain">
-            Source chain
-          </label>
-          <select
-            id="from-chain"
-            className="chain-pick"
-            value={fromId}
-            onChange={(e) => setFromId(Number(e.target.value))}
-          >
-            {CHAINS.map((c) => (
-              <option key={c.id} value={c.id} disabled={c.id === toId}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-          <span className="swapcard-tag">You send</span>
-        </div>
+        <span className="swapcard-tag">You send</span>
 
         <label className="sr-label" htmlFor="amt">
           Amount in USDC
         </label>
-        <div className="bignum">
-          <input
-            id="amt"
-            className="bignum-input mono"
-            inputMode="decimal"
-            value={raw}
-            onChange={(e) => setRaw(e.target.value)}
-            onBlur={() => setTouched(true)}
-            aria-invalid={showError}
-            aria-describedby={showError ? 'amt-err' : undefined}
-            placeholder="0.00"
+        <div className="swapcard-row">
+          <div className="bignum">
+            <input
+              id="amt"
+              className="bignum-input mono"
+              inputMode="decimal"
+              value={raw}
+              onChange={(e) => setRaw(e.target.value)}
+              onBlur={() => setTouched(true)}
+              aria-invalid={showError}
+              aria-describedby={showError ? 'amt-err' : undefined}
+              placeholder="0.00"
+              /* Mono digits, so a ch width sizes exactly to the value. Without
+                 it the input eats the whole row and shoves "USDC" away from the
+                 number it labels. */
+              style={{ width: `${Math.max(4, raw.length)}ch` }}
+            />
+            <span className="bignum-unit mono">USDC</span>
+          </div>
+          <ChainPicker
+            id="from-chain"
+            label="Source chain"
+            value={fromId}
+            disabledId={toId}
+            onPick={setFromId}
           />
-          <span className="bignum-unit mono">USDC</span>
         </div>
 
         {showError && (
@@ -126,21 +171,23 @@ export function TransferPanel({ onChange }: Props) {
 
         <div className="quick">
           <span className="quick-l">Standard sizes</span>
-          {LADDER.slice()
-            .reverse()
-            .map((d) => (
-              <button
-                key={d}
-                type="button"
-                className={`chip mono${amount === d ? ' chip-on' : ''}`}
-                onClick={() => {
-                  setRaw(String(d));
-                  setTouched(false);
-                }}
-              >
-                {d}
-              </button>
-            ))}
+          <div className="quick-row">
+            {LADDER.slice()
+              .reverse()
+              .map((d) => (
+                <button
+                  key={d}
+                  type="button"
+                  className={`chip mono${amount === d ? ' chip-on' : ''}`}
+                  onClick={() => {
+                    setRaw(String(d));
+                    setTouched(false);
+                  }}
+                >
+                  {d}
+                </button>
+              ))}
+          </div>
         </div>
       </div>
 
@@ -159,52 +206,43 @@ export function TransferPanel({ onChange }: Props) {
 
       {/* ---- To ---- */}
       <div className="swapcard swapcard-out">
-        <div className="swapcard-top">
-          <label className="sr-label" htmlFor="to-chain">
-            Destination chain
-          </label>
-          <select
+        <span className="swapcard-tag">You receive</span>
+
+        <div className="swapcard-row">
+          <div className="bignum bignum-out">
+            <span className="bignum-static mono">{received.toFixed(2)}</span>
+            <span className="bignum-unit mono">USDC</span>
+          </div>
+          <ChainPicker
             id="to-chain"
-            className="chain-pick"
+            label="Destination chain"
             value={toId}
-            onChange={(e) => setToId(Number(e.target.value))}
-          >
-            {CHAINS.map((c) => (
-              <option key={c.id} value={c.id} disabled={c.id === fromId}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-          <span className="swapcard-tag">You receive</span>
+            disabledId={fromId}
+            onPick={setToId}
+          />
         </div>
 
-        <div className="bignum bignum-out">
-          <span className="bignum-static mono">{received.toFixed(2)}</span>
-          <span className="bignum-unit mono">USDC</span>
-        </div>
-
-        {bucketing && plan.legs.length > 0 ? (
-          <>
-            <div className="legs">
-              {plan.legs.map((leg, i) => (
-                <span className="leg mono" key={`${leg}-${i}`}>
-                  {leg}
+        {bucketing && groups.length > 0 ? (
+          <div className="split">
+            <span className="split-l">
+              {plan.legs.length} withdrawal{plan.legs.length === 1 ? '' : 's'}
+            </span>
+            <div className="split-row">
+              {groups.map((g) => (
+                <span className="leg mono" key={g.d}>
+                  {g.d}
+                  {g.n > 1 && <em className="leg-x">×{g.n}</em>}
                 </span>
               ))}
-            </div>
-            <p className="sm muted">
-              Arrives as {plan.legs.length} withdrawal
-              {plan.legs.length === 1 ? '' : 's'} of standard size
               {plan.change > 0 && (
-                <>
-                  {' '}
-                  · <strong className="held">{plan.change.toFixed(2)} stays in the pool</strong>
-                </>
+                <span className="leg leg-held mono" title="Retained inside the pool as a note">
+                  +{plan.change.toFixed(2)} held
+                </span>
               )}
-            </p>
-          </>
+            </div>
+          </div>
         ) : (
-          <p className="sm muted">
+          <p className="sm muted split-note">
             {bucketing
               ? 'Enter an amount to see how it will be split.'
               : 'Arrives as one withdrawal carrying the exact figure.'}
@@ -221,12 +259,9 @@ export function TransferPanel({ onChange }: Props) {
             onChange={(e) => setBucketing(e.target.checked)}
           />
           <span>
-            <span className="toggle-h">
-              <IconLayers className="ico-dim" /> Split into standard denominations
-            </span>
+            <span className="toggle-h">Split into standard denominations</span>
             <span className="muted sm block">
-              Your amount leaves as common sizes so no withdrawal is distinctive.
-              The remainder stays in the pool.
+              No withdrawal carries your amount. The remainder stays in the pool.
             </span>
           </span>
         </label>
@@ -254,14 +289,18 @@ export function TransferPanel({ onChange }: Props) {
       <dl className="preview">
         <div>
           <dt>Route</dt>
-          <dd>
-            {from.name} → pool → {to.name}
+          <dd className="route">
+            <ChainMark id={from.id} size={15} />
+            <span>{from.short}</span>
+            <i>→</i>
+            <span className="route-pool">pool</span>
+            <i>→</i>
+            <ChainMark id={to.id} size={15} />
+            <span>{to.short}</span>
           </dd>
         </div>
         <div>
-          <dt>
-            <IconClock className="ico-dim" /> Each leg
-          </dt>
+          <dt>Each leg</dt>
           <dd className="mono">
             {lo}–{hi} min
           </dd>

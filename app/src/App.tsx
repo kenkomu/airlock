@@ -54,19 +54,23 @@ export default function App() {
       </header>
 
       <main>
-        <section className="hero">
+        {/* Compact rather than a full hero: the app itself is the argument, and
+            a judge scrolling past a billboard to reach it is a worse pitch. */}
+        <section className="lede">
           <span className="pill">
             <IconShield /> RFP-09 · cross-chain privacy
           </span>
           <h1>Private across chains — with the leaks named out loud.</h1>
-          <p className="hero-sub">
-            Bridge in, hold private, withdraw somewhere else. Airlock shows the
-            anonymity set you are actually hiding in and refuses to call a
-            distinctive amount private.
+          <p className="lede-sub">
+            Airlock shows the anonymity set you are actually hiding in, and
+            refuses to call a distinctive amount private.
           </p>
         </section>
 
-        <div className="grid grid-main">
+        {/* Transfer and its report are a pair and belong side by side. The
+            anonymity panel is neither — it describes the pool, not this
+            transfer — so it spans full width instead of padding a column. */}
+        <div className="grid-main">
           <TransferPanel onChange={onChange} />
           <PrivacyReport
             report={report}
@@ -75,48 +79,53 @@ export default function App() {
           />
         </div>
 
-        <div className="grid">
-          <AnonymityPanel state={anon} />
+        <AnonymityPanel state={anon} />
 
-          <section className="card" aria-labelledby="pub-h">
-            <header className="card-h">
-              <h2 id="pub-h">What is hidden, and what is not</h2>
-              <span className="card-h-note">no overclaiming</span>
-            </header>
-            <div className="tbl-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Public</th>
-                    <th>Private</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td>Deposit address, token, amount</td>
-                    <td>Which deposit a withdrawal came from</td>
-                  </tr>
-                  <tr>
-                    <td>Withdrawal destination and amount</td>
-                    <td>Note-to-note transfers: amounts and parties</td>
-                  </tr>
-                  <tr>
-                    <td>Timing of every leg</td>
-                    <td>Your identity inside the proof</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-            <p className="muted sm">
-              Shielding is not private — <em>what you do afterwards</em> is. The
-              auditor holds an escrowed viewing key and can de-anonymize the
-              Starknet side; that is a tradeoff STRK20 makes deliberately, and it
-              is why this is a privacy tool rather than a mixer.
-            </p>
-          </section>
-        </div>
+        {/* Reference material, deliberately without card chrome. Boxing it at
+            the same weight as the app made every region look equally important,
+            which is the same as none of them being. */}
+        <section className="ref" aria-labelledby="ref-h">
+          <h2 id="ref-h" className="ref-h">
+            Reference
+          </h2>
+          <div className="ref-grid">
+            <Steps />
 
-        <Steps />
+            <section className="ref-block" aria-labelledby="pub-h">
+              <h3 id="pub-h">What is hidden, and what is not</h3>
+              <div className="tbl-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Public</th>
+                      <th>Private</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>Deposit address, token, amount</td>
+                      <td>Which deposit a withdrawal came from</td>
+                    </tr>
+                    <tr>
+                      <td>Withdrawal destination and amount</td>
+                      <td>Note-to-note transfers: amounts and parties</td>
+                    </tr>
+                    <tr>
+                      <td>Timing of every leg</td>
+                      <td>Your identity inside the proof</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <p className="muted sm">
+                Shielding is not private — <em>what you do afterwards</em> is.
+                The auditor holds an escrowed viewing key and can de-anonymize
+                the Starknet side; that is a tradeoff STRK20 makes deliberately,
+                and it is why this is a privacy tool rather than a mixer.
+              </p>
+            </section>
+          </div>
+        </section>
       </main>
 
       <footer className="bottom">

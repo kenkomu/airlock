@@ -17,7 +17,7 @@ const BLOCKS_PER_DAY = 43_200;
 
 export function AnonymityPanel({ state }: { state: AnonymityState }) {
   return (
-    <section className="card" aria-labelledby="anon-h">
+    <section className="card card-anon" aria-labelledby="anon-h">
       <header className="card-h">
         <h2 id="anon-h">Anonymity set</h2>
         <span className="card-h-note">Starknet mainnet · live</span>
@@ -54,6 +54,7 @@ function Ready({ snap }: { snap: AnonymitySnapshot }) {
 
   return (
     <>
+      <div className="anon-body">
       <div className="metrics">
         <Metric
           k="Deposits in window"
@@ -87,6 +88,7 @@ function Ready({ snap }: { snap: AnonymitySnapshot }) {
           </p>
         </div>
       )}
+      </div>
 
       <footer className="card-f">
         <p className="muted sm">

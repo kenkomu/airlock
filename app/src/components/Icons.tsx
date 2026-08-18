@@ -82,3 +82,16 @@ export const IconWallet = ({ className }: P) => (
     <path d="M3 10h18M16.5 14.5h.2" />
   </svg>
 );
+
+export const IconChevron = ({ className }: P) => (
+  <svg {...base} className={className}>
+    <path d="M6 9.5l6 6 6-6" />
+  </svg>
+);
+
+export const IconLock = ({ className }: P) => (
+  <svg {...base} className={className}>
+    <rect x="4.5" y="10.5" width="15" height="9.5" rx="2" />
+    <path d="M8 10.5V7.8a4 4 0 018 0v2.7" />
+  </svg>
+);
