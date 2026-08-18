@@ -57,13 +57,10 @@ jobs:
           path: ~/.cache/scarb
           key: scarb-${{ runner.os }}-${{ hashFiles('Scarb.lock') }}
           restore-keys: scarb-${{ runner.os }}-
-      - name: Diagnose git dependency fetch
-        run: |
-          git --version
-          echo "--- global git config ---"
-          git config --global --list || true
-          echo "--- direct clone of a transitive dep ---"
-          git ls-remote https://github.com/starkware-libs/starkware-starknet-utils HEAD || echo "ls-remote FAILED"
-          git ls-remote https://github.com/EkuboProtocol/starknet-contracts HEAD || echo "ekubo ls-remote FAILED"
-      - run: GIT_TRACE=1 GIT_CURL_VERBOSE=0 scarb build -vvv 2>&1 | tail -120
+      # `privacy` pulls in starkware-starknet-utils and ekubo, so a run depends
+      # on four repositories being reachable. That fetch has flaked once with a
+      # bare git exit 128; one retry costs nothing and turns a GitHub-side hiccup
+      # back into a passing build.
+      - name: Build
+        run: scarb build || (sleep 20 && scarb build)
       - run: snforge test
