@@ -36,12 +36,26 @@ jobs:
     name: Anonymizer — build and test
     runs-on: ubuntu-latest
     steps:
+      # persist-credentials: false matters here. actions/checkout otherwise
+      # writes an auth header into global git config, and Scarb inherits it when
+      # fetching its own git dependencies — `privacy` pulls in
+      # starkware-starknet-utils and ekubo — where that credential does not
+      # apply. Git exits 128 and Scarb reports it as a bare "exit status: 128".
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: software-mansion/setup-scarb@v1
         with:
           scarb-version: "2.19.1"
       - uses: foundry-rs/setup-snfoundry@v3
         with:
           starknet-foundry-version: "0.62.1"
+      # Git dependencies resolve through the network on every run; caching them
+      # keeps the job from being dominated by fetches.
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/scarb
+          key: scarb-${{ runner.os }}-${{ hashFiles('Scarb.lock') }}
+          restore-keys: scarb-${{ runner.os }}-
       - run: scarb build
       - run: snforge test
