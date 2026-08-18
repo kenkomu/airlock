@@ -57,5 +57,13 @@ jobs:
           path: ~/.cache/scarb
           key: scarb-${{ runner.os }}-${{ hashFiles('Scarb.lock') }}
           restore-keys: scarb-${{ runner.os }}-
-      - run: scarb build
+      - name: Diagnose git dependency fetch
+        run: |
+          git --version
+          echo "--- global git config ---"
+          git config --global --list || true
+          echo "--- direct clone of a transitive dep ---"
+          git ls-remote https://github.com/starkware-libs/starkware-starknet-utils HEAD || echo "ls-remote FAILED"
+          git ls-remote https://github.com/EkuboProtocol/starknet-contracts HEAD || echo "ekubo ls-remote FAILED"
+      - run: GIT_TRACE=1 GIT_CURL_VERBOSE=0 scarb build -vvv 2>&1 | tail -120
       - run: snforge test
