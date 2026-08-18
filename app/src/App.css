@@ -1503,3 +1503,147 @@ body::before {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--s3);
 }
+
+/* ============================================================
+   Wallet
+   ============================================================ */
+
+.addr-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s2);
+  min-height: 44px;
+  padding: 0 var(--s3) 0 var(--s3);
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 0.86rem;
+  transition: border-color var(--t), background var(--t);
+}
+.addr-pill:hover {
+  border-color: var(--accent-dim);
+  background: var(--surface-3);
+}
+.addr-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  flex: 0 0 auto;
+}
+/* Connected is not the same as usable. A wallet on the wrong network, or one
+   that cannot do STRK20, must not look identical to one that is ready. */
+.addr-dot-ok {
+  background: var(--sealed);
+  box-shadow: 0 0 0 3px rgba(70, 185, 120, 0.16);
+}
+.addr-dot-warn {
+  background: var(--leak);
+  box-shadow: 0 0 0 3px rgba(217, 154, 43, 0.16);
+}
+.addr-off {
+  font-size: 0.72rem;
+  color: var(--text-3);
+  padding-left: var(--s2);
+  border-left: 1px solid var(--border);
+}
+
+/* ---------- picker sheet ---------- */
+.sheet-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: var(--s4);
+  background: rgba(4, 8, 12, 0.72);
+  backdrop-filter: blur(3px);
+}
+.sheet {
+  width: min(420px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s3);
+  padding: var(--s5);
+  border-radius: 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: 0 30px 80px -20px rgba(0, 0, 0, 1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+.sheet-h {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s3);
+}
+.sheet-h h2 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+.sheet-x {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text-2);
+  font-size: 1.1rem;
+  line-height: 1;
+}
+.sheet-x:hover:not(:disabled) {
+  background: var(--surface-3);
+  color: var(--text);
+}
+
+.wlist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+}
+.wrow {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  min-height: 56px;
+  padding: 0 var(--s3);
+  border-radius: 14px;
+  border: 1px solid var(--border-soft);
+  background: var(--surface-2);
+  color: var(--text);
+  transition: background var(--t), border-color var(--t);
+}
+.wrow:hover:not(:disabled) {
+  background: var(--surface-3);
+  border-color: var(--accent-dim);
+}
+.wrow:disabled {
+  opacity: 0.55;
+  cursor: progress;
+}
+.wicon {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  flex: 0 0 auto;
+}
+.wname {
+  flex: 1;
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.92rem;
+}
+.wgo {
+  color: var(--text-3);
+  font-size: 0.8rem;
+}
+
+/* Page-level status, above the app rather than inside it. */
+main > .notice {
+  margin-bottom: var(--s4);
+}

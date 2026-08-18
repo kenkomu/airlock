@@ -68,16 +68,18 @@ Deliberately one lane, taken all the way to mainnet, rather than four half-finis
 
 ## What works today
 
-Nothing is deployed yet. This list is the honest answer to "can I use this", and is updated as pieces land.
+This list is the honest answer to "can I use this", and is updated as pieces land. Nothing of our own is deployed yet.
 
+- [x] Mainnet — three verified pool transactions, listed in [`strk20.json`](strk20.json)
+- [x] Anonymity-set and timing disclosure — reads the live mainnet pool, no wallet needed
+- [x] Denomination bucketing and exposure assessment
+- [x] Connect a privacy-enabled Starknet wallet (Starknet Wallet API, `WalletAccountV6`)
+- [x] Shielded balance view — `strk20Balances` through the connected wallet
 - [ ] Deterministic Starknet account derived from an EVM signature
 - [ ] Registration with sponsored gas
 - [ ] Bridge in: CCTP → private note
-- [ ] Shielded balance view
 - [ ] `PrivacyHub` anonymizer contract
-- [ ] Anonymity-set and timing disclosure
 - [ ] Withdraw to a different chain
-- [ ] Mainnet
 
 ## Running locally
 

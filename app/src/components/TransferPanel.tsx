@@ -29,6 +29,8 @@ import {
   IconArrowRight,
 } from './Icons';
 import { ChainMark, UsdcMark } from './Marks';
+import type { WalletSession } from '../hooks/useWallet';
+import { formatUnits } from '../lib/wallet';
 
 export interface TransferState {
   fromId: number;
@@ -41,6 +43,8 @@ export interface TransferState {
 
 interface Props {
   onChange: (s: TransferState) => void;
+  session: WalletSession;
+  onConnect: () => void;
 }
 
 /* A native <select> kept for keyboard and mobile behaviour, laid transparently
@@ -95,7 +99,7 @@ function groupLegs(legs: number[]): { d: number; n: number }[] {
   }, []);
 }
 
-export function TransferPanel({ onChange }: Props) {
+export function TransferPanel({ onChange, session, onConnect }: Props) {
   const [fromId, setFromId] = useState(137);
   const [toId, setToId] = useState(42161);
   const [raw, setRaw] = useState('847.32');
@@ -127,12 +131,22 @@ export function TransferPanel({ onChange }: Props) {
   const received = bucketing ? plan.moved : valid ? amount : 0;
   const groups = groupLegs(plan.legs);
 
+  /* Real shielded balance, read from the pool through the wallet. Shown only
+     when it is genuinely known — an absent balance and a zero balance mean very
+     different things and must not render the same. */
+  const shielded = session.balances.find((b) => b.symbol === 'USDC');
+  const conn = session.state.phase === 'connected' ? session.state.conn : null;
+  const usable = conn !== null && conn.onMainnet && conn.support.kind === 'ready';
+
   return (
     <section className="card card-action" aria-labelledby="tx-h">
       <header className="card-h">
         <h2 id="tx-h">Move funds privately</h2>
         <span className="card-h-note">
-          <UsdcMark size={16} /> USDC
+          <UsdcMark size={16} />
+          {shielded
+            ? `${formatUnits(shielded.amount, shielded.decimals)} USDC shielded`
+            : 'USDC'}
         </span>
       </header>
 
@@ -332,11 +346,19 @@ export function TransferPanel({ onChange }: Props) {
         )}
       </dl>
 
-      <button type="button" className="btn btn-primary btn-lg" disabled>
-        <IconWallet /> Connect a wallet to continue
-      </button>
+      {conn === null ? (
+        <button type="button" className="btn btn-primary btn-lg" onClick={onConnect}>
+          <IconWallet /> Connect a wallet to continue
+        </button>
+      ) : (
+        <button type="button" className="btn btn-primary btn-lg" disabled>
+          <IconWallet /> {usable ? 'Continue' : 'Wallet cannot do this yet'}
+        </button>
+      )}
       <p className="muted sm center">
-        You approve each leg in your wallet. Airlock never chains them for you.
+        {usable
+          ? 'Bridge legs are not wired yet — connection and shielded reads are.'
+          : 'You approve each leg in your wallet. Airlock never chains them for you.'}
       </p>
     </section>
   );

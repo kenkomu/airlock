@@ -9,6 +9,8 @@ import { assess } from './lib/exposure';
 import { planBuckets } from './lib/buckets';
 import { byId } from './lib/chains';
 import { IconShield } from './components/Icons';
+import { ConnectWallet, WalletNotice } from './components/ConnectWallet';
+import { useWallet } from './hooks/useWallet';
 
 const INITIAL: TransferState = {
   fromId: 137,
@@ -22,6 +24,9 @@ const INITIAL: TransferState = {
 export default function App() {
   const [tx, setTx] = useState<TransferState>(INITIAL);
   const onChange = useCallback((s: TransferState) => setTx(s), []);
+
+  const session = useWallet();
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   /* One scan, shared by the report's crowd factor and the anonymity panel. */
   const anon = useAnonymitySet();
@@ -47,9 +52,7 @@ export default function App() {
         </div>
         <div className="top-right">
           <span className="badge badge-net mono">MAINNET</span>
-          <button type="button" className="btn" disabled>
-            Connect wallet
-          </button>
+          <ConnectWallet session={session} open={pickerOpen} setOpen={setPickerOpen} />
         </div>
       </header>
 
@@ -70,8 +73,14 @@ export default function App() {
         {/* Transfer and its report are a pair and belong side by side. The
             anonymity panel is neither — it describes the pool, not this
             transfer — so it spans full width instead of padding a column. */}
+        <WalletNotice session={session} />
+
         <div className="grid-main">
-          <TransferPanel onChange={onChange} />
+          <TransferPanel
+            onChange={onChange}
+            session={session}
+            onConnect={() => setPickerOpen(true)}
+          />
           <PrivacyReport
             report={report}
             fromName={byId(tx.fromId).name}
