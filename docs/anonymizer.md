@@ -70,14 +70,34 @@ pulls back inside one atomic call.
 ## Testing
 
 ```sh
-scarb build && snforge test     # 24 tests
+scarb build && snforge test     # 39 tests
 cd app && pnpm test             # 21 tests, including the parity table
 ```
 
-The Cairo suite covers decomposition (exhaustively for every bucketable amount
-from 1 to 400), access control, the exact-approval property, and the griefing
-vector above. The TypeScript suite re-runs the same fixture table so the two
-implementations stay pinned to each other.
+| Suite | Covers |
+| --- | --- |
+| `ladder_tests` (10) | Decomposition, exhaustively for every bucketable amount from 1 to 400; the shared fixture table for 6- and 18-decimal tokens; greedy minimality; descending order; and the four fail-closed cases |
+| `bucketer_tests` (18) | Access control, exact approval, note ordering, the donation griefing vector, constructor guards, the event, and the read-only views |
+| `integration_tests` (11) | Full cycles against `MockPool`, which replicates the real pool's assertions constant for constant |
+
+The integration suite is the one that answers *"will this work on chain"*. The
+unit tests prove the contract does what was intended; these prove the intention
+was right — that a returned span survives `_apply_invoke_and_deposits` and
+`_deposit_to_open_note` unchanged, that the approval covers exactly what the pool
+pulls, and that the anonymizer holds nothing afterwards.
+
+Two findings came out of writing them:
+
+- **Duplicate note ids fail on the pool's counter, not its per-note check.** A
+  note id is a storage slot, so a repeated id is *one* note — the open-note
+  counter therefore sees fewer notes than legs returned and underflows before
+  `NOTE_ALREADY_DEPOSITED` can fire. That error is unreachable from this
+  contract, because we pair leg *i* with id *i* and can only emit a duplicate if
+  handed one.
+- **The fixture table caught two arithmetic errors** in the expected leg counts
+  written from memory (999 needs 11 legs, not 8; 847 needs 8, not 7) — exactly
+  the class of bug that would otherwise have shipped as a transaction that
+  always reverts.
 
 ## Layout note
 

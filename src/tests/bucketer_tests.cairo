@@ -9,8 +9,8 @@
 use airlock_anonymizer::bucketer::{IAirlockBucketerDispatcher, IAirlockBucketerDispatcherTrait};
 use airlock_anonymizer::mocks::{IMockErc20Dispatcher, IMockErc20DispatcherTrait};
 use snforge_std::{
-    ContractClassTrait, DeclareResultTrait, declare, start_cheat_caller_address,
-    stop_cheat_caller_address,
+    ContractClassTrait, DeclareResultTrait, EventSpyTrait, EventsFilterTrait, declare, spy_events,
+    start_cheat_caller_address, stop_cheat_caller_address,
 };
 use starknet::ContractAddress;
 
@@ -277,4 +277,72 @@ fn config_is_exposed() {
     assert!(d.pool() == pool(), "pool not exposed");
     assert!(d.token() == env.token, "token not exposed");
     assert!(d.unit() == USDC, "unit not exposed");
+}
+
+// ---------------------------------------------------------------- construction
+
+/// Attempt a deploy and return the panic reason, so the constructor guards can
+/// be asserted individually. `deploy(...).unwrap()` would collapse all three
+/// into the same "Result::unwrap failed", which would pass whichever guard
+/// fired — including none of them.
+fn deploy_error(pool_addr: ContractAddress, token: ContractAddress, unit: u128) -> felt252 {
+    let class = declare("AirlockBucketer").unwrap().contract_class();
+    let mut calldata = array![];
+    pool_addr.serialize(ref calldata);
+    token.serialize(ref calldata);
+    unit.serialize(ref calldata);
+    match class.deploy(@calldata) {
+        Result::Ok(_) => 'DEPLOYED',
+        Result::Err(panic_data) => *panic_data.at(0),
+    }
+}
+
+#[test]
+fn a_zero_pool_cannot_be_deployed() {
+    // Config is immutable, so a mistake at construction is permanent: the only
+    // remedy is redeploying, and a contract pointed at address zero would look
+    // deployed while accepting calls from nobody.
+    let env = deploy();
+    assert!(
+        deploy_error(0.try_into().unwrap(), env.token, USDC) == 'ZERO_POOL',
+        "a zero pool was accepted",
+    );
+}
+
+#[test]
+fn a_zero_token_cannot_be_deployed() {
+    assert!(
+        deploy_error(pool(), 0.try_into().unwrap(), USDC) == 'ZERO_TOKEN',
+        "a zero token was accepted",
+    );
+}
+
+#[test]
+fn a_zero_unit_cannot_be_deployed() {
+    // A zero unit collapses every denomination to zero, and the pool rejects
+    // zero-amount deposits, so this would deploy a contract that can never
+    // complete a single transaction.
+    let env = deploy();
+    assert!(deploy_error(pool(), env.token, 0) == 'ZERO_UNIT', "a zero unit was accepted");
+}
+
+// ---------------------------------------------------------------- events
+
+#[test]
+fn it_emits_one_bucketed_event_per_call() {
+    // The event carries the leg count but not the per-leg amounts: those are
+    // already public in the pool's own OpenNoteDeposited events, and re-emitting
+    // them here would add noise without adding information.
+    let env = deploy();
+    fund(env, 847);
+    let mut spy = spy_events();
+
+    start_cheat_caller_address(env.bucketer, pool());
+    IAirlockBucketerDispatcher { contract_address: env.bucketer }
+        .privacy_invoke(847 * USDC, ids(8));
+    stop_cheat_caller_address(env.bucketer);
+
+    let events = spy.get_events().emitted_by(env.bucketer);
+    let count: u32 = ArrayTrait::len(@events.events);
+    assert!(count == 1, "expected exactly one event");
 }
