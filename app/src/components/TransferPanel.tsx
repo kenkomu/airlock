@@ -19,7 +19,15 @@ import { CHAINS, byId, roundTripEstimate } from '../lib/chains';
 import { LADDER, planBuckets } from '../lib/buckets';
 import { REST_PRESETS } from '../lib/exposure';
 import type { BucketPlan } from '../lib/buckets';
-import { IconSwap, IconWallet, IconChevron } from './Icons';
+import {
+  IconSwap,
+  IconWallet,
+  IconChevron,
+  IconClock,
+  IconLayers,
+  IconLock,
+  IconArrowRight,
+} from './Icons';
 import { ChainMark, UsdcMark } from './Marks';
 
 export interface TransferState {
@@ -136,7 +144,14 @@ export function TransferPanel({ onChange }: Props) {
           Amount in USDC
         </label>
         <div className="swapcard-row">
-          <div className="bignum">
+          <ChainPicker
+            id="from-chain"
+            label="Source chain"
+            value={fromId}
+            disabledId={toId}
+            onPick={setFromId}
+          />
+          <div className="amt">
             <input
               id="amt"
               className="bignum-input mono"
@@ -147,20 +162,9 @@ export function TransferPanel({ onChange }: Props) {
               aria-invalid={showError}
               aria-describedby={showError ? 'amt-err' : undefined}
               placeholder="0.00"
-              /* Mono digits, so a ch width sizes exactly to the value. Without
-                 it the input eats the whole row and shoves "USDC" away from the
-                 number it labels. */
-              style={{ width: `${Math.max(4, raw.length)}ch` }}
             />
-            <span className="bignum-unit mono">USDC</span>
+            <span className="amt-sub mono">USDC</span>
           </div>
-          <ChainPicker
-            id="from-chain"
-            label="Source chain"
-            value={fromId}
-            disabledId={toId}
-            onPick={setFromId}
-          />
         </div>
 
         {showError && (
@@ -209,10 +213,6 @@ export function TransferPanel({ onChange }: Props) {
         <span className="swapcard-tag">You receive</span>
 
         <div className="swapcard-row">
-          <div className="bignum bignum-out">
-            <span className="bignum-static mono">{received.toFixed(2)}</span>
-            <span className="bignum-unit mono">USDC</span>
-          </div>
           <ChainPicker
             id="to-chain"
             label="Destination chain"
@@ -220,6 +220,10 @@ export function TransferPanel({ onChange }: Props) {
             disabledId={fromId}
             onPick={setToId}
           />
+          <div className="amt amt-out">
+            <span className="bignum-static mono">{received.toFixed(2)}</span>
+            <span className="amt-sub mono">USDC</span>
+          </div>
         </div>
 
         {bucketing && groups.length > 0 ? (
@@ -286,29 +290,46 @@ export function TransferPanel({ onChange }: Props) {
       </div>
 
       {/* ---- route preview ---- */}
-      <dl className="preview">
-        <div>
-          <dt>Route</dt>
+      {/* The detail list from a swap confirmation sheet: label left, value
+          right, one fact per row. It scans faster than the three-column grid
+          it replaces and has room for the facts that matter here. */}
+      <dl className="details">
+        <div className="detail">
+          <dt>
+            <IconArrowRight className="ico-dim" /> Route
+          </dt>
           <dd className="route">
             <ChainMark id={from.id} size={15} />
             <span>{from.short}</span>
-            <i>→</i>
+            <i>&rarr;</i>
             <span className="route-pool">pool</span>
-            <i>→</i>
+            <i>&rarr;</i>
             <ChainMark id={to.id} size={15} />
             <span>{to.short}</span>
           </dd>
         </div>
-        <div>
-          <dt>Each leg</dt>
+        <div className="detail">
+          <dt>
+            <IconClock className="ico-dim" /> Each leg
+          </dt>
           <dd className="mono">
-            {lo}–{hi} min
+            {lo}&ndash;{hi} min
           </dd>
         </div>
-        <div>
-          <dt>Withdrawals</dt>
+        <div className="detail">
+          <dt>
+            <IconLayers className="ico-dim" /> Withdrawals
+          </dt>
           <dd className="mono">{bucketing ? plan.legs.length || 0 : valid ? 1 : 0}</dd>
         </div>
+        {bucketing && plan.change > 0 && (
+          <div className="detail">
+            <dt>
+              <IconLock className="ico-dim" /> Stays in the pool
+            </dt>
+            <dd className="mono">{plan.change.toFixed(2)} USDC</dd>
+          </div>
+        )}
       </dl>
 
       <button type="button" className="btn btn-primary btn-lg" disabled>

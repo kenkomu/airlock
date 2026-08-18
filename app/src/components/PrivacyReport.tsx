@@ -55,9 +55,12 @@ export function PrivacyReport({ report, fromName, toName }: Props) {
         outLabel={toName}
       />
 
+      {/* Display scale, because the verdict is the answer the page exists to
+          give. As a small badge it read as metadata about the diagram above it. */}
       <div className={`verdict verdict-${report.overall}`} role="status">
-        <span className="verdict-badge">{head.label.toUpperCase()}</span>
-        <p>{head.blurb}</p>
+        <span className="verdict-eyebrow">Verdict</span>
+        <span className="verdict-word">{head.label}</span>
+        <p className="verdict-blurb">{head.blurb}</p>
       </div>
 
       <ul className="factors">

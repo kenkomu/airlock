@@ -9,11 +9,16 @@
  */
 
 import type { AnonymitySnapshot } from '../lib/pool';
+import { TokenMark } from './Marks';
 import type { AnonymityState } from '../hooks/useAnonymitySet';
 
 /* ~2s Starknet blocks put a day at roughly this many. Used only to describe the
    window in human terms, never to compute a claim. */
 const BLOCKS_PER_DAY = 43_200;
+
+/* Below this share of pool deposits, a token's crowd is called thin in words.
+   The threshold is a judgement call, so it lives here named rather than inline. */
+const THIN_SHARE = 20;
 
 export function AnonymityPanel({ state }: { state: AnonymityState }) {
   return (
@@ -50,37 +55,57 @@ function Ready({ snap }: { snap: AnonymitySnapshot }) {
     1,
     Math.round((snap.headBlock - snap.fromBlock) / BLOCKS_PER_DAY),
   );
-  const top = snap.byToken[0]?.deposits ?? 1;
+  const tokenTotal = snap.byToken.reduce((sum, t) => sum + t.deposits, 0);
 
   return (
     <>
       <div className="anon-body">
-      <div className="metrics">
-        <Metric
-          k="Deposits in window"
-          v={snap.deposits.toLocaleString()}
-          hint="the crowd you hide in"
-        />
-        <Metric k="Registered keys" v={snap.registrations.toLocaleString()} />
-        <Metric k="Pool transactions" v={snap.uniqueTxs.toLocaleString()} />
-      </div>
+        {/* One headline figure with the supporting two beneath it, the shape a
+            wallet uses for a balance. Three equal tiles gave the number that
+            decides whether you are hidden at all no more weight than a count
+            of registrations. */}
+        <div className="anon-lead">
+          <div className="stat-hero">
+            <span className="metric-k">Deposits in window</span>
+            <span className="stat-hero-v mono">{snap.deposits.toLocaleString()}</span>
+            <span className="metric-hint">the crowd you hide in</span>
+          </div>
+          <div className="metrics">
+            <Metric k="Registered keys" v={snap.registrations.toLocaleString()} />
+            <Metric k="Pool transactions" v={snap.uniqueTxs.toLocaleString()} />
+          </div>
+        </div>
 
       {snap.byToken.length > 0 && (
         <div className="tokens">
           <h3 className="sub">Deposits by token</h3>
-          <ul>
-            {snap.byToken.map((t) => (
-              <li key={t.symbol}>
-                <span className="mono tok">{t.symbol}</span>
-                <span className="bar-track" aria-hidden="true">
-                  <span
-                    className="bar"
-                    style={{ width: `${Math.max(2, (t.deposits / top) * 100)}%` }}
-                  />
-                </span>
-                <span className="mono num">{t.deposits.toLocaleString()}</span>
-              </li>
-            ))}
+          <ul className="toklist">
+            {snap.byToken.map((t) => {
+              const share = tokenTotal > 0 ? (t.deposits / tokenTotal) * 100 : 0;
+              return (
+                <li className="tokrow" key={t.symbol}>
+                  <TokenMark symbol={t.symbol} size={30} />
+                  <span className="tokrow-id">
+                    <span className="tokrow-sym">{t.symbol}</span>
+                    <span className="tokrow-name">
+                      {share.toFixed(0)}% of deposits
+                    </span>
+                  </span>
+                  <span className="tokrow-val">
+                    <span className="tokrow-n mono">
+                      {t.deposits.toLocaleString()}
+                    </span>
+                    {/* Thin slices are named, not just drawn short. The whole
+                        point of this panel is that a small crowd is stated. */}
+                    <span
+                      className={`tokrow-tag${share < THIN_SHARE ? ' tokrow-thin' : ''}`}
+                    >
+                      {share < THIN_SHARE ? 'thin crowd' : 'deposits'}
+                    </span>
+                  </span>
+                </li>
+              );
+            })}
           </ul>
           <p className="muted sm">
             You hide among people who moved <em>the same token</em>. A thin token

@@ -113,6 +113,54 @@ export const UsdcMark = (p: P) => (
   </Mark>
 );
 
+/* Starknet. */
+const Strk = (p: P) => (
+  <Mark {...p}>
+    {disc('#0C0C4F')}
+    <path
+      d="M6.6 13.4c2-2.6 3.8-3.9 5.4-3.9s3.4 1.3 5.4 3.9"
+      fill="none"
+      stroke="#fff"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+    />
+    <circle cx="17.4" cy="9.4" r="1.5" fill="#EC796B" />
+  </Mark>
+);
+
+/* Anything the pool reports that we have no mark for. A lettered disc is
+   honest about being a placeholder in a way a wrong logo would not be. */
+const Letter = ({ symbol, ...p }: P & { symbol: string }) => (
+  <Mark {...p}>
+    {disc('#2a3644')}
+    <text
+      x="12"
+      y="12.6"
+      textAnchor="middle"
+      dominantBaseline="middle"
+      fontSize="9"
+      fontWeight="700"
+      fontFamily="'IBM Plex Sans', system-ui, sans-serif"
+      fill="#9aaab8"
+    >
+      {symbol.slice(0, 1)}
+    </text>
+  </Mark>
+);
+
+const BY_SYMBOL: Record<string, (p: P) => React.ReactElement> = {
+  STRK: Strk,
+  ETH: Ethereum,
+  WETH: Ethereum,
+  USDC: UsdcMark,
+};
+
+export function TokenMark({ symbol, size, className }: P & { symbol: string }) {
+  const M = BY_SYMBOL[symbol.toUpperCase()];
+  if (M) return <M size={size} className={className} />;
+  return <Letter symbol={symbol} size={size} className={className} />;
+}
+
 const BY_ID: Record<number, (p: P) => React.ReactElement> = {
   1: Ethereum,
   137: Polygon,
