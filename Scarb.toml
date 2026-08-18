@@ -1,0 +1,28 @@
+# Airlock's anonymizer lives at the repository root because the hub indexer reads
+# `Scarb.toml` from the root and nowhere else — a nested manifest is invisible to
+# it, and with it the "Anonymizer contract" signal. The web app is in `app/`.
+
+[package]
+name = "airlock_anonymizer"
+version = "0.1.0"
+edition = "2024_07"
+license = "MIT"
+description = "Denomination-bucketing anonymizer for the STRK20 privacy pool"
+
+[dependencies]
+starknet = "2.19.0"
+# The pool's own Cairo. `OpenNoteDeposit` must stay byte-identical to
+# `privacy::objects::OpenNoteDeposit` or the pool cannot deserialize what we
+# return, so we depend on the real thing rather than mirroring it.
+privacy = { git = "https://github.com/starkware-libs/starknet-privacy" }
+
+[dev-dependencies]
+snforge_std = "0.62.0"
+assert_macros = "2.19.0"
+
+[[target.starknet-contract]]
+sierra = true
+casm = true
+
+[scripts]
+test = "snforge test"

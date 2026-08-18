@@ -1,0 +1,86 @@
+# The bucketing anonymizer
+
+`AirlockBucketer` is the contract the STRK20 pool calls through `privacy_invoke`.
+It takes a bucketable amount the pool has withdrawn to it and hands it straight
+back as several open notes of standard denominations, so that no note carries
+the user's actual figure.
+
+## Why
+
+A withdrawal of 847.32 USDC is a 1:1 fingerprint against a deposit of 847.32
+USDC no matter how sound the proofs are, because amounts are public on both
+sides. StarkWare's own threat model logs this as an accepted **P0 with mitigation
+deferred**, and names the fix — fixed denominations plus change-as-note. Nothing
+in the ecosystem implements it.
+
+Splitting 847 into `500 + 250 + 50 + 25 + 10 + 10 + 1 + 1` means every leg
+matches other people's legs of the same size. The anonymity set for a leg becomes
+"everyone who ever moved this denomination" rather than "nobody, because nobody
+else moved 847.32".
+
+## The mechanism
+
+`privacy_invoke` returns `Span<OpenNoteDeposit>` — an array. Returning several
+notes is not a workaround; it is the shape the interface was built with. The
+client creates *n* open notes in its action list, passes their ids, and the
+contract fills each with one denomination.
+
+```
+withdraw  847 USDC  →  AirlockBucketer
+transfer  "OPEN" x8 →  eight open notes created
+invoke    AirlockBucketer(amount, [id0 … id7])
+                    →  returns 8 OpenNoteDeposits, pool pulls 847 back
+```
+
+## Invariants the pool enforces on us
+
+Read from `privacy::privacy::_apply_actions` and `_deposit_to_open_note`. Getting
+any of these wrong is a reverted transaction:
+
+| Pool assertion | What it means here |
+| --- | --- |
+| `undeposited_open_notes == 0` | **Every** open note created must be filled — we return exactly as many deposits as the client created notes, never fewer |
+| `checked_sub(deposits.len())` | …and never more, or it underflows |
+| `ZERO_AMOUNT` / `ZERO_TOKEN` | no zero-valued note may be returned |
+| `NOTE_NOT_OPEN`, `NOTE_ALREADY_DEPOSITED`, `TOKEN_MISMATCH` | each note must exist, be open, be unfilled, and match the token |
+| `checked_transfer_from(depositor → pool)` | we must approve the pool first, and must actually hold the funds |
+
+The first is the reason `app/src/lib/buckets.ts` and `src/ladder.cairo` share a
+fixture table: a client planning *n* legs against a contract producing *m* is not
+a cosmetic mismatch, it is a transaction that always reverts.
+
+## Security posture
+
+**No owner, no upgrade path, no admin key, no mutable storage.** Everything
+configurable — pool, token, unit scale — is baked at construction, so the attack
+surface is the single entrypoint. One deployment serves one token; serving
+another is another deployment, which is how the reference anonymizers do it too.
+
+The contract never holds funds between transactions: the pool withdraws to it and
+pulls back inside one atomic call.
+
+| Decision | Why |
+| --- | --- |
+| Caller must be the baked pool | Everything downstream assumes it, including that the pool is who will pull the approval we just granted |
+| Amount is **declared**, not read from `balance_of` | Otherwise anyone could send one unit of USDC and permanently break the contract: the split would shift, stop matching the client's notes, and every transaction would revert. A denial of service for a millionth of a dollar. Covered by `a_donation_cannot_break_it` |
+| Approve exactly the amount | Not unlimited. A bug elsewhere cannot drain more than this call legitimately moved, and nothing survives the transaction |
+| Non-bucketable amounts revert | Rounding would mean quietly moving a different amount than the interface displayed — on a privacy tool, the worst available failure |
+| `MAX_LEGS = 24` | Gas is linear in legs, but the real reason is that a 40-leg withdrawal is itself a fingerprint. Bucketing into a pattern nobody else could produce defeats its own purpose |
+
+## Testing
+
+```sh
+scarb build && snforge test     # 24 tests
+cd app && pnpm test             # 21 tests, including the parity table
+```
+
+The Cairo suite covers decomposition (exhaustively for every bucketable amount
+from 1 to 400), access control, the exact-approval property, and the griefing
+vector above. The TypeScript suite re-runs the same fixture table so the two
+implementations stay pinned to each other.
+
+## Layout note
+
+`Scarb.toml` sits at the repository root rather than in a subdirectory because
+the hub indexer reads the root manifest and nowhere else — a nested one is
+invisible to it. The web app lives in `app/`.

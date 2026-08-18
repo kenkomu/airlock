@@ -75,10 +75,11 @@ This list is the honest answer to "can I use this", and is updated as pieces lan
 - [x] Denomination bucketing and exposure assessment
 - [x] Connect a privacy-enabled Starknet wallet (Starknet Wallet API, `WalletAccountV6`)
 - [x] Shielded balance view — `strk20Balances` through the connected wallet
+- [x] **`AirlockBucketer` anonymizer in Cairo** — denomination bucketing, the mitigation StarkWare's threat model defers. 24 snforge tests, see [docs/anonymizer.md](docs/anonymizer.md)
+- [ ] Anonymizer deployed to mainnet
 - [ ] Deterministic Starknet account derived from an EVM signature
 - [ ] Registration with sponsored gas
 - [ ] Bridge in: CCTP → private note
-- [ ] `PrivacyHub` anonymizer contract
 - [ ] Withdraw to a different chain
 
 ## Running locally
