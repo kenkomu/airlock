@@ -15,6 +15,21 @@
 export const SN_MAIN = '0x534e5f4d41494e';
 export const SN_SEPOLIA = '0x534e5f5345504f4c4941';
 
+/* One anonymizer serves exactly one token on one pool with one ladder: all three
+   are constructor arguments with no setter. So "the bucketer" is not a property
+   of a network, it is a property of a (network, token) pair, and modelling it
+   any other way would eventually point a USDC transaction at a STRK contract. */
+export interface Bucketer {
+  address: string;
+  token: string;
+  symbol: string;
+  decimals: number;
+  /* Base-unit value of one rung. The ladder is 1000/500/250/100/50/25/10/5/1
+     multiplied by this, so `unit` is what makes the same class serve a
+     6-decimal token and an 18-decimal one. */
+  unit: bigint;
+}
+
 export interface Network {
   chainId: string;
   name: string;
@@ -22,11 +37,10 @@ export interface Network {
      scan, which otherwise reads as a broken app rather than a busy endpoint. */
   rpcUrls: string[];
   pool: string;
-  usdc: string;
-  /* Airlock's own anonymizer. `null` where it is not deployed yet, which the UI
-     must treat as "bucketing unavailable here" rather than crashing on a
-     zero address that would revert deep inside the pool. */
-  bucketer: string | null;
+  /* Empty where nothing is deployed yet, which the UI must treat as "bucketing
+     unavailable here" rather than falling through to a zero address that would
+     revert deep inside the pool. */
+  bucketers: Bucketer[];
   explorer: string;
 }
 
@@ -35,8 +49,7 @@ const MAINNET: Network = {
   name: 'Starknet',
   rpcUrls: ['https://rpc.starknet.lava.build', 'https://starknet-rpc.publicnode.com'],
   pool: '0x040337b1af3c663e86e333bab5a4b28da8d4652a15a69beee2b677776ffe812a',
-  usdc: '0x033068f6539f8e6e6b131e6b2b814e6c34a5224bc66947c47dab9dfee93b35fb',
-  bucketer: null,
+  bucketers: [],
   explorer: 'https://voyager.online',
 };
 
@@ -45,8 +58,25 @@ const SEPOLIA: Network = {
   name: 'Starknet Sepolia',
   rpcUrls: ['https://starknet-sepolia-rpc.publicnode.com', 'https://api.cartridge.gg/x/starknet/sepolia'],
   pool: '0x254a6b2997ef52e9f830ce1f543f6b29768295e8d17e2267d672c552cfe0d91',
-  usdc: '0x0512feac6339ff7889822cb5aa2a86c848e9d392bb0e3e237c008674feed8343',
-  bucketer: '0x004c368ae058ee81b61884c5c47ee57484c4348669b66ac606366bbd1fd1b1fb',
+  bucketers: [
+    /* STRK first: it is what the Sepolia pool is actually exercised with — 47 of
+       the last 50 deposits — because native Sepolia USDC needs a faucet. The
+       0.1-STRK rung keeps a rehearsal round trip to a couple of test tokens. */
+    {
+      address: '0x00de39f79e7e8b0dcdafe955330e206990203d6047a22e853eab9df83c440e6b',
+      token: '0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d',
+      symbol: 'STRK',
+      decimals: 18,
+      unit: 100_000_000_000_000_000n,
+    },
+    {
+      address: '0x004c368ae058ee81b61884c5c47ee57484c4348669b66ac606366bbd1fd1b1fb',
+      token: '0x0512feac6339ff7889822cb5aa2a86c848e9d392bb0e3e237c008674feed8343',
+      symbol: 'USDC',
+      decimals: 6,
+      unit: 1_000_000n,
+    },
+  ],
   explorer: 'https://sepolia.voyager.online',
 };
 
@@ -58,6 +88,15 @@ export const NETWORKS: Network[] = [MAINNET, SEPOLIA];
 export function networkFor(chainId: string): Network | undefined {
   const want = BigInt(chainId);
   return NETWORKS.find((n) => BigInt(n.chainId) === want);
+}
+
+/* Address comparison is on the felt, never the string: the same address is
+   written with and without leading zeros, and in either case, by different
+   tools. Two spellings of one address comparing unequal is the bug that points
+   a transaction at "no bucketer for this token" when one is right there. */
+export function bucketerFor(n: Network, token: string): Bucketer | undefined {
+  const want = BigInt(token);
+  return n.bucketers.find((b) => BigInt(b.token) === want);
 }
 
 export function txUrl(n: Network, hash: string): string {

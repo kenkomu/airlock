@@ -5,7 +5,8 @@
     "0x6beb4415dc14438f5870e1b37cabaf53e361cf09c8bc2e7a12fc83b2ce2887"
   ],
   "contracts": [
-    "0x004c368ae058ee81b61884c5c47ee57484c4348669b66ac606366bbd1fd1b1fb"
+    "0x004c368ae058ee81b61884c5c47ee57484c4348669b66ac606366bbd1fd1b1fb",
+    "0x00de39f79e7e8b0dcdafe955330e206990203d6047a22e853eab9df83c440e6b"
   ],
   "demo_url": "",
   "demo_video": "",

@@ -25,6 +25,10 @@ SEPOLIA_POOL=0x254a6b2997ef52e9f830ce1f543f6b29768295e8d17e2267d672c552cfe0d91
 SEPOLIA_USDC=0x0512feAc6339Ff7889822cb5aA2a86C848e9D392bB0E3E237C008674feeD8343
 MAINNET_POOL=0x040337b1af3c663e86e333bab5a4b28da8d4652a15a69beee2b677776ffe812a
 MAINNET_USDC=0x033068F6539f8e6e6b131e6B2B814e6c34A5224bC66947c47DaB9dFeE93b35fb
+# STRK is the same address on both networks and is what the Sepolia pool is
+# actually exercised with (47 of the last 50 deposits), which makes it the
+# token to rehearse against — native Sepolia USDC needs a faucet.
+STRK_TOKEN_ADDR=0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d
 
 # USDC is a 6-decimal token, so 1_000_000 base units is 1 USDC and the ladder
 # runs 1000 … 1 USDC. Baked at construction and NOT changeable afterwards.
@@ -32,11 +36,13 @@ UNIT=1000000
 DRY_RUN=""
 ASSUME_YES=""
 VERIFY_ONLY=""
+TOKEN_CHOICE=usdc
 
 NETWORK="${1:-}"; shift || true
 while [ $# -gt 0 ]; do
   case "$1" in
     --unit)    UNIT="$2"; shift 2 ;;
+    --token)   TOKEN_CHOICE="$2"; shift 2 ;;
     --dry-run) DRY_RUN="--dry-run"; shift ;;
     --yes|-y)  ASSUME_YES=1; shift ;;
     --verify)  VERIFY_ONLY="$2"; shift 2 ;;
@@ -45,9 +51,19 @@ while [ $# -gt 0 ]; do
 done
 
 case "$NETWORK" in
-  sepolia) POOL=$SEPOLIA_POOL; TOKEN=$SEPOLIA_USDC ;;
-  mainnet) POOL=$MAINNET_POOL; TOKEN=$MAINNET_USDC ;;
-  *) echo "usage: $0 <sepolia|mainnet> [--unit N] [--dry-run] [--yes] [--verify ADDR]" >&2; exit 2 ;;
+  sepolia) POOL=$SEPOLIA_POOL; USDC=$SEPOLIA_USDC ;;
+  mainnet) POOL=$MAINNET_POOL; USDC=$MAINNET_USDC ;;
+  *) echo "usage: $0 <sepolia|mainnet> [--token usdc|strk|0x…] [--unit N] [--dry-run] [--yes] [--verify ADDR]" >&2; exit 2 ;;
+esac
+
+# One deployment serves one token, by construction — the token is a constructor
+# argument with no setter. Deploying for another token is another deployment,
+# which is also how the reference anonymizers do it.
+case "$TOKEN_CHOICE" in
+  usdc) TOKEN=$USDC ;;
+  strk) TOKEN=$STRK_TOKEN_ADDR ;;
+  0x*)  TOKEN=$TOKEN_CHOICE ;;
+  *) echo "unknown token: $TOKEN_CHOICE (use usdc, strk, or a 0x address)" >&2; exit 2 ;;
 esac
 
 RPC=$(sed -n "/^\[sncast\.$NETWORK\]/,/^\[/p" snfoundry.toml | sed -n 's/^url *= *"\(.*\)"/\1/p')
@@ -85,13 +101,18 @@ BALANCE_OF=0x035a73cd311a05d46deda634c5ee045db92f811b4e74bca4437fcb5302b7af33
 check_funding() {
   ACCOUNT_NAME=$(sed -n "/^\[sncast\.$NETWORK\]/,/^\[/p" snfoundry.toml | sed -n 's/^account *= *"\(.*\)"/\1/p')
   # Read only the address out of the accounts file. Never touch anything else in it.
+  # The accounts file is keyed by network FIRST, and the same account name lives
+  # under both. Matching on name alone returns whichever network happens to come
+  # first in the file — which is how a mainnet address ended up being reported as
+  # an unfunded Sepolia one. Match the network too.
   addr=$(python3 -c "
 import json,os,sys
 f=os.path.expanduser('~/.starknet_accounts/starknet_open_zeppelin_accounts.json')
 try: d=json.load(open(f))
 except Exception: sys.exit(0)
-for net in d.values():
-    a=net.get('$ACCOUNT_NAME')
+for net, accts in d.items():
+    if '$NETWORK' not in net: continue
+    a=accts.get('$ACCOUNT_NAME')
     if a and a.get('address'): print(a['address']); break
 " 2>/dev/null)
 
@@ -131,19 +152,36 @@ verify_deployment() {
   # back without leading zeros and in lower case, which is the same felt written
   # differently; anything comparing strings here reports a correct deploy as broken.
   check() { # function, expected, label
-    raw=$(sncast --profile "$NETWORK" call --contract-address "$ADDRESS" --function "$1" 2>/dev/null \
-          | sed -n 's/^Response: *//p')
+    # A public RPC drops a call now and then. Reporting that as a mismatch says
+    # "this deployment is wrong, do not use it" about a contract that is fine —
+    # so retry, and if the node still will not answer, say THAT rather than
+    # accusing the contract. The two failures need different responses from
+    # whoever is reading: one is "deploy again", the other is "ask again".
+    raw=""
+    for _ in 1 2 3; do
+      raw=$(sncast --profile "$NETWORK" call --contract-address "$ADDRESS" --function "$1" 2>/dev/null \
+            | sed -n 's/^Response: *//p')
+      [ -n "$raw" ] && break
+      sleep 2
+    done
+    if [ -z "$raw" ]; then
+      printf '  \033[33m??\033[0m   %-6s no answer from the node after 3 tries — unverified\n' "$3"
+      return 2
+    fi
     got=$(echo "$raw" | grep -oE '0x[0-9a-fA-F]+|[0-9]+' | head -1)
     exp_dec=$(python3 -c "print(int('$2', 0))")
     got_dec=$(python3 -c "print(int('${got:-x}', 0))" 2>/dev/null || echo unparseable)
     if [ "$exp_dec" = "$got_dec" ]; then printf '  \033[32mok\033[0m   %-6s %s\n' "$3" "$raw"
-    else printf '  \033[31mBAD\033[0m  %-6s got %s, expected %s\n' "$3" "${raw:-<no response>}" "$2"; return 1; fi
+    else printf '  \033[31mBAD\033[0m  %-6s got %s, expected %s\n' "$3" "$raw" "$2"; return 1; fi
   }
-  rc=0
-  check pool  "$POOL"  pool  || rc=1
-  check token "$TOKEN" token || rc=1
-  check unit  "$UNIT"  unit  || rc=1
+  rc=0; unread=0
+  for pair in "pool:$POOL" "token:$TOKEN" "unit:$UNIT"; do
+    fn=${pair%%:*}; want=${pair#*:}
+    check "$fn" "$want" "$fn" || { [ $? -eq 2 ] && unread=1 || rc=1; }
+  done
   [ $rc -eq 0 ] || fail "on-chain state does not match what was requested — do NOT use this deployment"
+  [ $unread -eq 0 ] || fail "could not read every value back. The deployment may well be fine; re-run:
+    $0 $NETWORK --token $TOKEN_CHOICE --unit $UNIT --verify $ADDRESS"
   
   say "Ladder"
   sncast --profile "$NETWORK" call --contract-address "$ADDRESS" --function denominations 2>/dev/null \

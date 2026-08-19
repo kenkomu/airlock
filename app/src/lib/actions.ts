@@ -46,7 +46,7 @@
 
 import type { STRK20_ACTION } from 'starknet';
 import { CallData, RpcProvider, num, validateAndParseAddress } from 'starknet';
-import type { Network } from './networks';
+import type { Bucketer, Network } from './networks';
 
 /* Mirrors MAX_LEGS in the Cairo. Duplicated deliberately: the client should
    refuse a plan the contract would reject rather than pay to discover it. */
@@ -114,9 +114,10 @@ function decodeSpan(raw: readonly string[]): bigint[] {
 
 export interface DenominateRequest {
   network: Network;
-  /* Token being bucketed. Must be the one the bucketer was deployed for — it
-     serves exactly one token, by construction. */
-  token: string;
+  /* The deployment to route through. It carries its own token, because one
+     anonymizer serves exactly one — passing a token separately would create a
+     pair that can disagree. */
+  bucketer: Bucketer | undefined;
   /* Total, in the token's base units, already known to be on the ladder. */
   amount: bigint;
   /* One entry per note, from the contract's own `plan`. */
@@ -128,14 +129,14 @@ export interface DenominateRequest {
 }
 
 export function buildDenominate(req: DenominateRequest): STRK20_ACTION[] {
-  const { network, token, amount, legs, owner } = req;
-  const bucketer = network.bucketer;
+  const { network, bucketer, amount, legs, owner } = req;
 
   if (!bucketer) {
     throw new ActionBuildError(
-      `Airlock's anonymizer is not deployed on ${network.name}, so there is nothing to route through.`,
+      `Airlock has no anonymizer deployed for this token on ${network.name}, so there is nothing to route through.`,
     );
   }
+  const token = bucketer.token;
   if (amount <= 0n) {
     throw new ActionBuildError('Amount must be greater than zero.');
   }
@@ -162,7 +163,7 @@ export function buildDenominate(req: DenominateRequest): STRK20_ACTION[] {
 
   const tokenFelt = felt(validateAndParseAddress(token));
   const ownerFelt = felt(validateAndParseAddress(owner));
-  const bucketerFelt = felt(validateAndParseAddress(bucketer));
+  const bucketerFelt = felt(validateAndParseAddress(bucketer.address));
 
   return [
     /* 1. Fund the bucketer. It holds the money for exactly as long as this

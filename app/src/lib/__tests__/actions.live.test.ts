@@ -18,7 +18,7 @@
 import { describe, expect, it } from 'vitest';
 import { RpcProvider } from 'starknet';
 import { buildDenominate, fetchDenominations, fetchPlan } from '../actions';
-import { SN_SEPOLIA, networkFor } from '../networks';
+import { SN_SEPOLIA, bucketerFor, networkFor } from '../networks';
 
 const live = process.env.AIRLOCK_LIVE === '1';
 const net = networkFor(SN_SEPOLIA)!;
@@ -27,7 +27,11 @@ const OWNER = '0x05c66f610289cb55ec63ac953a3c3cc1f3812438ddef444f73f026c468a1580
 
 describe.skipIf(!live)('against the deployed Sepolia anonymizer', () => {
   const provider = new RpcProvider({ nodeUrl: net.rpcUrls[0] });
-  const bucketer = net.bucketer!;
+  /* The USDC deployment: 6 decimals, 1-USDC rungs. There is a STRK one beside
+     it with an 18-decimal ladder, and picking the wrong one would still return
+     a plausible-looking span — hence resolving it by token rather than index. */
+  const usdc = bucketerFor(net, '0x0512feac6339ff7889822cb5aa2a86c848e9d392bb0e3e237c008674feed8343')!;
+  const bucketer = usdc.address;
 
   it('reads the ladder the UI claims to enforce', async () => {
     expect(await fetchDenominations(provider, bucketer)).toEqual(
@@ -44,7 +48,7 @@ describe.skipIf(!live)('against the deployed Sepolia anonymizer', () => {
   it('builds an action array from the plan the chain supplied', async () => {
     const amount = 3n * M;
     const legs = await fetchPlan(provider, bucketer, amount);
-    const actions = buildDenominate({ network: net, token: net.usdc, amount, legs, owner: OWNER });
+    const actions = buildDenominate({ network: net, bucketer: usdc, amount, legs, owner: OWNER });
 
     /* One withdraw, one note per leg, one invoke. */
     expect(actions).toHaveLength(legs.length + 2);

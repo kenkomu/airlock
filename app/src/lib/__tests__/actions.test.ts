@@ -14,20 +14,28 @@ import {
   buildDenominate,
   describeActions,
 } from '../actions';
-import type { Network } from '../networks';
+import type { Bucketer, Network } from '../networks';
+
+const USDC = '0x0512feac6339ff7889822cb5aa2a86c848e9d392bb0e3e237c008674feed8343';
+
+const BUCKETER: Bucketer = {
+  address: '0x004c368ae058ee81b61884c5c47ee57484c4348669b66ac606366bbd1fd1b1fb',
+  token: USDC,
+  symbol: 'USDC',
+  decimals: 6,
+  unit: 1_000_000n,
+};
 
 const NET: Network = {
   chainId: '0x534e5f5345504f4c4941',
   name: 'Starknet Sepolia',
   rpcUrls: ['https://example.invalid'],
   pool: '0x254a6b2997ef52e9f830ce1f543f6b29768295e8d17e2267d672c552cfe0d91',
-  usdc: '0x0512feac6339ff7889822cb5aa2a86c848e9d392bb0e3e237c008674feed8343',
-  bucketer: '0x004c368ae058ee81b61884c5c47ee57484c4348669b66ac606366bbd1fd1b1fb',
+  bucketers: [BUCKETER],
   explorer: 'https://sepolia.voyager.online',
 };
 
 const OWNER = '0x05c66f610289cb55ec63ac953a3c3cc1f3812438ddef444f73f026c468a15802';
-const USDC = NET.usdc;
 
 /* 847 USDC → 500 + 250 + 50 + 25 + 10 + 10 + 1 + 1, which is what the deployed
    contract returns for this input. Kept in base units, as the chain sees it. */
@@ -38,7 +46,7 @@ const LEGS = [500n * M, 250n * M, 50n * M, 25n * M, 10n * M, 10n * M, 1n * M, 1n
 function build(over: Partial<Parameters<typeof buildDenominate>[0]> = {}) {
   return buildDenominate({
     network: NET,
-    token: USDC,
+    bucketer: BUCKETER,
     amount: AMOUNT,
     legs: LEGS,
     owner: OWNER,
@@ -107,7 +115,7 @@ describe('routing', () => {
   it('sends the withdrawal to the bucketer, not the user', () => {
     const w = build()[0];
     if (w.type !== 'withdraw') throw new Error('shape');
-    expect(BigInt(w.recipient)).toBe(BigInt(NET.bucketer!));
+    expect(BigInt(w.recipient)).toBe(BigInt(BUCKETER.address));
   });
 
   it('gives the notes to the user, not the bucketer', () => {
@@ -148,12 +156,10 @@ describe('refusing to build something that cannot settle', () => {
     expect(() => build({ amount: 0n, legs: [] })).toThrow(/greater than zero/);
   });
 
-  it('refuses a network where the anonymizer is not deployed', () => {
-    /* Mainnet is this case today. Failing here is the difference between a
-       clear message and a revert inside the pool on a zero address. */
-    expect(() => build({ network: { ...NET, bucketer: null } })).toThrow(
-      /not deployed/,
-    );
+  it('refuses a token with no anonymizer deployed for it', () => {
+    /* Every token on mainnet is this case today. Failing here is the difference
+       between a clear message and a revert inside the pool on a zero address. */
+    expect(() => build({ bucketer: undefined })).toThrow(/no anonymizer/);
   });
 });
 

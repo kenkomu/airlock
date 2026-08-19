@@ -26,8 +26,17 @@ verified by class-hash match. **Airlock deploys neither** — it points at these
 
 | Contract | Network | Address |
 | --- | --- | --- |
-| AirlockBucketer (`unit` = 1 USDC) | Sepolia | `0x004c368ae058ee81b61884c5c47ee57484c4348669b66ac606366bbd1fd1b1fb` |
+| AirlockBucketer — USDC, 1-USDC rungs | Sepolia | `0x004c368ae058ee81b61884c5c47ee57484c4348669b66ac606366bbd1fd1b1fb` |
+| AirlockBucketer — STRK, 0.1-STRK rungs | Sepolia | `0x00de39f79e7e8b0dcdafe955330e206990203d6047a22e853eab9df83c440e6b` |
 | AirlockBucketer | mainnet | not yet deployed |
+
+One class, two deployments. `pool`, `token` and `unit` are constructor
+arguments with no setters, so an anonymizer serves exactly one token on one
+pool with one ladder — serving another is another deployment, which is also how
+StarkWare's own bridge anonymizers do it. The STRK instance exists because the
+Sepolia pool is overwhelmingly exercised with STRK (47 of the last 50 deposits)
+while native Sepolia USDC needs a faucet, so it is what a rehearsal can
+actually use.
 
 Class hash `0x010ed58b30d78be2e4328abeb970c5d4650eb088ec1cf1d79a0ba81e4809c686`,
 declared on Sepolia in
