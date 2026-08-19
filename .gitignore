@@ -145,3 +145,10 @@ vite.config.ts.timestamp-*
 # Cairo
 /target/
 .snfoundry_cache/
+
+# Starknet signing material. sncast keeps accounts in ~/.starknet_accounts by
+# default, outside this repo; these patterns are the backstop for anyone who
+# points --accounts-file or --keystore at the working tree instead.
+*keystore*.json
+*accounts*.json
+!**/package.json

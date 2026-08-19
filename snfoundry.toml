@@ -1,0 +1,14 @@
+# Network profiles for `sncast`. Public RPC endpoints and public contract
+# addresses only — no keys, no account addresses, nothing secret.
+#
+# Signing keys live in sncast's accounts file OUTSIDE this repository
+# (~/.starknet_accounts/starknet_open_zeppelin_accounts.json by default), which
+# is why no `accounts-file` path is set here. See docs/deploy.md.
+
+[sncast.sepolia]
+url = "https://starknet-sepolia-rpc.publicnode.com"
+account = "airlock-deployer"
+
+[sncast.mainnet]
+url = "https://starknet-rpc.publicnode.com"
+account = "airlock-deployer"
