@@ -73,6 +73,55 @@ preflight() {
   [ "$UNIT" -gt 0 ] 2>/dev/null || fail "unit must be a positive integer (got '$UNIT')"
 }
 
+# --- funding -----------------------------------------------------------------
+# sncast reports an unfunded or undeployed deployer as "Account ... not found",
+# which reads like a config error. Check it here so the message names the actual
+# problem and the address to send STRK to.
+STRK_TOKEN=0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d
+BALANCE_OF=0x035a73cd311a05d46deda634c5ee045db92f811b4e74bca4437fcb5302b7af33
+
+check_funding() {
+  ACCOUNT_NAME=$(sed -n "/^\[sncast\.$NETWORK\]/,/^\[/p" snfoundry.toml | sed -n 's/^account *= *"\(.*\)"/\1/p')
+  # Read only the address out of the accounts file. Never touch anything else in it.
+  addr=$(python3 -c "
+import json,os,sys
+f=os.path.expanduser('~/.starknet_accounts/starknet_open_zeppelin_accounts.json')
+try: d=json.load(open(f))
+except Exception: sys.exit(0)
+for net in d.values():
+    a=net.get('$ACCOUNT_NAME')
+    if a and a.get('address'): print(a['address']); break
+" 2>/dev/null)
+
+  if [ -z "$addr" ]; then
+    fail "no account named '$ACCOUNT_NAME'. Create one:
+    sncast --profile $NETWORK account create --name $ACCOUNT_NAME
+  Then see docs/deploy.md."
+  fi
+
+  low=$(rpc starknet_call "[{\"contract_address\":\"$STRK_TOKEN\",\"entry_point_selector\":\"$BALANCE_OF\",\"calldata\":[\"$addr\"]},\"latest\"]" \
+        | sed -n 's/.*"result":\["\([^"]*\)".*/\1/p')
+  strk=$(python3 -c "print(f\"{int('${low:-0x0}',16)/10**18:.4f}\")" 2>/dev/null || echo 0)
+
+  printf '  %-6s %s\n' "payer" "$addr"
+  printf '  %-6s %s STRK\n' "funds" "$strk"
+
+  if [ "${low:-0x0}" = "0x0" ]; then
+    faucet="https://starknet-faucet.vercel.app/"
+    [ "$NETWORK" = mainnet ] && faucet="your own wallet (this is real STRK)"
+    fail "the deployer holds no STRK. Send some to
+    $addr
+  from $faucet, then run:
+    sncast --profile $NETWORK account deploy --name $ACCOUNT_NAME"
+  fi
+
+  # Undeployed but funded: the one-time account deployment still has to happen.
+  if ! rpc starknet_getClassHashAt "[\"latest\",\"$addr\"]" | grep -q '"result"'; then
+    fail "the deployer is funded but not yet deployed on $NETWORK. Run:
+    sncast --profile $NETWORK account deploy --name $ACCOUNT_NAME"
+  fi
+}
+
 # --- confirmation ------------------------------------------------------------
 confirm_mainnet() {
   [ "$NETWORK" = mainnet ] || return 0
@@ -85,6 +134,7 @@ confirm_mainnet() {
 }
 
 preflight
+check_funding
 confirm_mainnet
 
 say "Building"
