@@ -209,9 +209,19 @@ function toBalances(raw: unknown): ShieldedBalance[] {
 }
 
 export async function connect(wallet: Wallet): Promise<Connection> {
-  /* Chain first, then the provider for it. `requestChainId` needs only the
-     wallet, so there is no ordering problem here — and building the account
-     against a mainnet provider while the wallet is on Sepolia would make every
+  /* Authorize FIRST. Everything below needs permission the wallet has not
+     granted yet: Ready refuses the lot with "Not preauthorized" until this
+     handshake completes, because this is what raises the approval prompt.
+
+     An earlier version read the chain id first, reasoning that `requestChainId`
+     only needs the wallet and so could not have an ordering problem. That was
+     wrong — it needs an AUTHORIZED wallet. The reordering arrived with network
+     awareness and broke connecting outright for the one wallet this app exists
+     to support. */
+  await walletV6.standardConnect(wallet);
+
+  /* Now the chain, and the provider for it. Building the account against a
+     mainnet provider while the wallet sits on Sepolia would make every
      subsequent read answer about the wrong chain. */
   const chainId = String(await walletV6.requestChainId(wallet));
   const network = networkFor(chainId);

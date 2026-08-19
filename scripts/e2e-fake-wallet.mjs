@@ -41,8 +41,16 @@ await p.evaluate(() => {
   const STRK = '0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d';
   const calls = [];
   window.__calls = calls;
+  // Ready refuses everything until the dapp is authorized through the
+  // wallet-standard connect handshake — the "Not preauthorized" error. The fake
+  // enforces the same rule, so an ordering mistake fails here rather than only
+  // in front of a human with the extension installed.
+  let authorized = false;
   const request = async ({ type, params }) => {
     calls.push(type);
+    if (!authorized && type !== 'wallet_supportedSpecs' && type !== 'wallet_supportedWalletApi') {
+      throw new Error('Not preauthorized');
+    }
     switch (type) {
       case 'wallet_requestChainId': return '0x534e5f5345504f4c4941';
       case 'wallet_requestAccounts': return [ACCOUNT];
@@ -65,7 +73,10 @@ await p.evaluate(() => {
     accounts: [{ address: ACCOUNT, publicKey: new Uint8Array(), chains: ['starknet:SN_SEPOLIA'], features: [] }],
     features: {
       'starknet:walletApi': { version: '1.0.0', request, walletVersion: '5.33.8', id: 'fakeready' },
-      'standard:connect': { version: '1.0.0', connect: async () => ({ accounts: fake.accounts }) },
+      'standard:connect': {
+        version: '1.0.0',
+        connect: async () => { authorized = true; return { accounts: fake.accounts }; },
+      },
       'standard:disconnect': { version: '1.0.0', disconnect: async () => {} },
       'standard:events': { version: '1.0.0', on: () => () => {} },
     },
