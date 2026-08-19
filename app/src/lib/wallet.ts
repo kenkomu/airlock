@@ -69,15 +69,49 @@ export interface Connection {
   balances: ShieldedBalance[];
 }
 
-/* MetaMask is excluded from discovery entirely. Its Starknet Snap probing
-   raises an unlock popup on every scan, which is hostile on a page the user may
-   only be reading. The starter kit does the same, for the same reason. */
+/* Discovery runs three ways, and only one of them is self-updating.
+ *
+ *   - **wallet-standard**: the wallet announces itself. Event-driven, so a
+ *     wallet that registers late still arrives.
+ *   - **EIP-6963**: MetaMask, through the virtual-wallet adapter. Also
+ *     event-driven.
+ *   - **injected**: the legacy `window.starknet_*` objects, which is how Ready
+ *     and Braavos still appear. This one is a ONE-SHOT scan of `window` at
+ *     store construction — see `registerInjectedWalletDiscovery`. An extension
+ *     that injects a moment after page load is simply never seen.
+ *
+ * That last point is why the picker showed a single wallet. The store exposes
+ * `_refreshInjectedWallets()` for exactly this case, so re-scan for a few
+ * seconds after mount rather than trusting one scan to have caught everyone.
+ *
+ * MetaMask is no longer excluded. Passing `eip1193Adapters: []` removed it from
+ * discovery altogether, which is a heavier price than the problem it avoided:
+ * its Snap probe can raise an unlock popup, but a wallet the user has installed
+ * and cannot see is worse than one that asks a question.
+ */
+const REFRESH_MS = 400;
+const REFRESH_FOR_MS = 6000;
+
 export function watchWallets(onChange: (wallets: Wallet[]) => void): () => void {
-  const store: Store = createStore({ eip1193Adapters: [] });
-  const publish = (list: readonly Wallet[]) =>
-    onChange(list.filter((w) => !/metamask/i.test(w.name)).slice());
+  const store: Store = createStore();
+  const publish = (list: readonly Wallet[]) => onChange(list.slice());
+
   publish(store.getWallets());
-  return store.subscribe(publish);
+  const unsubscribe = store.subscribe(publish);
+
+  /* Extensions register over the first few seconds. Polling stops rather than
+     running forever: an interval that never clears is a background cost on a
+     page someone may leave open. */
+  const started = Date.now();
+  const timer = setInterval(() => {
+    store._refreshInjectedWallets();
+    if (Date.now() - started > REFRESH_FOR_MS) clearInterval(timer);
+  }, REFRESH_MS);
+
+  return () => {
+    clearInterval(timer);
+    unsubscribe();
+  };
 }
 
 function messageOf(e: unknown): string {
