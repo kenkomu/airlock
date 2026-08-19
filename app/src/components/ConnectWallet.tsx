@@ -94,7 +94,7 @@ export function ConnectWallet({
               </button>
             </header>
 
-            {wallets.length > 0 ? (
+            {wallets.length > 0 && (
               <ul className="wlist">
                 {wallets.map((w: Wallet) => (
                   <li key={w.name}>
@@ -113,18 +113,14 @@ export function ConnectWallet({
                   </li>
                 ))}
               </ul>
-            ) : (
+            )}
+
+            <MissingWallets found={wallets} />
+
+            {wallets.length === 0 && (
               <p className="sm muted">
-                No Starknet wallet found in this browser. Private transfers need
-                a wallet that supports them —{' '}
-                <a href="https://www.ready.co/" target="_blank" rel="noreferrer">
-                  Ready
-                </a>{' '}
-                5.33.8 or newer, or{' '}
-                <a href="https://www.xverse.app/" target="_blank" rel="noreferrer">
-                  Xverse
-                </a>
-                . Install one and this list will fill in on its own.
+                No Starknet wallet found in this browser yet. If you have just
+                installed one, it will appear here on its own.
               </p>
             )}
 
@@ -142,6 +138,65 @@ export function ConnectWallet({
         </div>
       )}
     </>
+  );
+}
+
+/* The wallets that can actually do this, and where to get them.
+ *
+ * A picker can only list what the browser has injected — no discovery library
+ * can show a wallet that is not installed, and swapping ours would not have
+ * changed that. What it CAN do is stop being silent about it: someone whose
+ * picker shows only MetaMask has no way to know the two wallets that do private
+ * transfers on Starknet exist at all.
+ *
+ * Names are matched loosely because a wallet's advertised name is its own
+ * business and has already changed once — Argent X became Ready — so an exact
+ * match would quietly start recommending an install the user already has.
+ */
+const PRIVACY_WALLETS = [
+  {
+    name: 'Ready',
+    match: /ready|argent/i,
+    url: 'https://www.ready.co/',
+    note: 'private transfers, 5.33.8+',
+  },
+  {
+    name: 'Braavos',
+    match: /braavos/i,
+    url: 'https://braavos.app/',
+    note: 'Starknet wallet',
+  },
+  {
+    name: 'Xverse',
+    match: /xverse/i,
+    url: 'https://www.xverse.app/',
+    note: 'private transfers',
+  },
+] as const;
+
+function MissingWallets({ found }: { found: Wallet[] }) {
+  const missing = PRIVACY_WALLETS.filter(
+    (p) => !found.some((w) => p.match.test(w.name)),
+  );
+  if (missing.length === 0) return null;
+
+  return (
+    <div className="wmissing">
+      <p className="sm muted">
+        {found.length > 0 ? 'Not installed:' : 'Wallets that support this:'}
+      </p>
+      <ul className="wlist">
+        {missing.map((p) => (
+          <li key={p.name}>
+            <a className="wrow wrow-get" href={p.url} target="_blank" rel="noreferrer">
+              <span className="wname">{p.name}</span>
+              <span className="sm muted">{p.note}</span>
+              <span className="wgo">install ↗</span>
+            </a>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 

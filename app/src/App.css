@@ -1605,6 +1605,33 @@ body::before {
   flex-direction: column;
   gap: var(--s2);
 }
+/* Install rows sit below the real ones and must not compete with them: a wallet
+   you can click now outranks a wallet you would have to go and get. Dashed,
+   transparent, and the name is not bolded. */
+.wmissing {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+  margin-top: var(--s2);
+}
+.wrow-get {
+  background: transparent;
+  border-style: dashed;
+  min-height: 48px;
+  text-decoration: none;
+}
+.wrow-get .wname {
+  font-weight: 500;
+}
+.wrow-get .wgo {
+  margin-left: auto;
+  white-space: nowrap;
+}
+.wrow-get:hover {
+  background: var(--surface-2);
+  border-style: solid;
+}
+
 .wrow {
   width: 100%;
   display: flex;
