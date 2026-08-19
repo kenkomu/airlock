@@ -104,3 +104,32 @@ Two findings came out of writing them:
 `Scarb.toml` sits at the repository root rather than in a subdirectory because
 the hub indexer reads the root manifest and nowhere else — a nested one is
 invisible to it. The web app lives in `app/`.
+
+## What the tests actually cover
+
+| Layer | Count | What it proves |
+| --- | --- | --- |
+| `ladder_tests` | 10 | The decomposition itself — sums, ordering, minimality, fail-closed cases |
+| `bucketer_tests` | 18 | Access control, exact approval, note ordering, constructor guards |
+| `integration_tests` | 11 | Full cycles against `MockPool`, which replicates the pool's asserts |
+| `fork_tests` | 7 | The **deployed** contract on a Sepolia fork, against the **real** STRK token |
+
+The fork tests exist because `MockPool` and `MockErc20` share an author with the
+contract. They are worth a great deal, but they cannot disprove a misreading: if
+I misunderstood how the real token handles an approval, the mock misunderstands
+it identically and every test still passes. The fork tests put the real token
+and the deployed bytecode in the loop.
+
+They are pinned to a block, so a run today and a run next week assert the same
+thing, and they are excluded from CI (`--skip fork_tests`) because a pipeline
+that goes red when a public node is slow teaches people to ignore red.
+
+### What is still not covered
+
+**The pool has never called this contract.** `_apply_actions` runs behind a
+proven entry point that needs a STARK proof from the proving service, which a
+fork cannot produce. So the pool's own accounting — the open-note counter and
+`UNDEPOSITED_OPEN_NOTES` — rests on `MockPool` alone.
+
+One round trip through a wallet closes that, and nothing above should be read as
+having closed it already.

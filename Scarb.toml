@@ -24,5 +24,13 @@ assert_macros = "2.19.0"
 sierra = true
 casm = true
 
+# Fork target for the tests that run against the live Sepolia deployment.
+# Pinned to a block so a run today and a run next week assert the same thing —
+# an unpinned fork turns a passing suite into a weather report.
+[[tool.snforge.fork]]
+name = "SEPOLIA"
+url = "https://starknet-sepolia-rpc.publicnode.com"
+block_id.number = "13707994"
+
 [scripts]
 test = "snforge test"

@@ -63,4 +63,7 @@ jobs:
       # back into a passing build.
       - name: Build
         run: scarb build || (sleep 20 && scarb build)
-      - run: snforge test
+      # Fork tests hit a public Sepolia RPC. A pipeline that goes red because a
+      # node was slow teaches people to ignore red, so they are excluded here
+      # and run locally with `snforge test fork_tests`.
+      - run: snforge test --skip fork_tests
