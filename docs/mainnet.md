@@ -22,6 +22,29 @@ Both anonymizers were deployed by StarkWare on 14–15 July 2026 and are
 byte-identical to the canonical `bridge-anonymizers` build (scarb 2.19.1),
 verified by class-hash match. **Airlock deploys neither** — it points at these.
 
+## Airlock's own deployments
+
+| Contract | Network | Address |
+| --- | --- | --- |
+| AirlockBucketer (`unit` = 1 USDC) | Sepolia | `0x004c368ae058ee81b61884c5c47ee57484c4348669b66ac606366bbd1fd1b1fb` |
+| AirlockBucketer | mainnet | not yet deployed |
+
+Class hash `0x010ed58b30d78be2e4328abeb970c5d4650eb088ec1cf1d79a0ba81e4809c686`,
+declared on Sepolia in
+[`0x0339892f…`](https://sepolia.voyager.online/tx/0x0339892fc74b1f3408de8e91575a4cb2ff2790942e6af5898a97677734dbbb98).
+`pool()`, `token()` and `unit()` were read back off the chain after deployment
+and match the constructor arguments. The live ladder reads:
+
+```
+1000, 500, 250, 100, 50, 25, 10, 5, 1 USDC
+```
+
+and `plan(847_000_000)` returns `500 + 250 + 50 + 25 + 10 + 10 + 1 + 1`, while
+`plan(847_320_000)` reverts `NOT_ON_LADDER` — the same results the local suite
+asserts, now confirmed against a deployed contract rather than a mock.
+
+See [deploy.md](deploy.md).
+
 ## Chain constants
 
 | Key | Mainnet | Sepolia |

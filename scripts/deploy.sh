@@ -31,6 +31,7 @@ MAINNET_USDC=0x033068F6539f8e6e6b131e6B2B814e6c34A5224bC66947c47DaB9dFeE93b35fb
 UNIT=1000000
 DRY_RUN=""
 ASSUME_YES=""
+VERIFY_ONLY=""
 
 NETWORK="${1:-}"; shift || true
 while [ $# -gt 0 ]; do
@@ -38,6 +39,7 @@ while [ $# -gt 0 ]; do
     --unit)    UNIT="$2"; shift 2 ;;
     --dry-run) DRY_RUN="--dry-run"; shift ;;
     --yes|-y)  ASSUME_YES=1; shift ;;
+    --verify)  VERIFY_ONLY="$2"; shift 2 ;;
     *) echo "unknown argument: $1" >&2; exit 2 ;;
   esac
 done
@@ -45,7 +47,7 @@ done
 case "$NETWORK" in
   sepolia) POOL=$SEPOLIA_POOL; TOKEN=$SEPOLIA_USDC ;;
   mainnet) POOL=$MAINNET_POOL; TOKEN=$MAINNET_USDC ;;
-  *) echo "usage: $0 <sepolia|mainnet> [--unit N] [--dry-run] [--yes]" >&2; exit 2 ;;
+  *) echo "usage: $0 <sepolia|mainnet> [--unit N] [--dry-run] [--yes] [--verify ADDR]" >&2; exit 2 ;;
 esac
 
 RPC=$(sed -n "/^\[sncast\.$NETWORK\]/,/^\[/p" snfoundry.toml | sed -n 's/^url *= *"\(.*\)"/\1/p')
@@ -122,6 +124,32 @@ for net in d.values():
   fi
 }
 
+verify_deployment() {
+  say "Verifying $ADDRESS"
+  # sncast prints values with their Cairo type attached — `ContractAddress(0x2fa…)`,
+  # `1000000_u128` — so compare the NUMBER, not the rendering. Addresses also come
+  # back without leading zeros and in lower case, which is the same felt written
+  # differently; anything comparing strings here reports a correct deploy as broken.
+  check() { # function, expected, label
+    raw=$(sncast --profile "$NETWORK" call --contract-address "$ADDRESS" --function "$1" 2>/dev/null \
+          | sed -n 's/^Response: *//p')
+    got=$(echo "$raw" | grep -oE '0x[0-9a-fA-F]+|[0-9]+' | head -1)
+    exp_dec=$(python3 -c "print(int('$2', 0))")
+    got_dec=$(python3 -c "print(int('${got:-x}', 0))" 2>/dev/null || echo unparseable)
+    if [ "$exp_dec" = "$got_dec" ]; then printf '  \033[32mok\033[0m   %-6s %s\n' "$3" "$raw"
+    else printf '  \033[31mBAD\033[0m  %-6s got %s, expected %s\n' "$3" "${raw:-<no response>}" "$2"; return 1; fi
+  }
+  rc=0
+  check pool  "$POOL"  pool  || rc=1
+  check token "$TOKEN" token || rc=1
+  check unit  "$UNIT"  unit  || rc=1
+  [ $rc -eq 0 ] || fail "on-chain state does not match what was requested — do NOT use this deployment"
+  
+  say "Ladder"
+  sncast --profile "$NETWORK" call --contract-address "$ADDRESS" --function denominations 2>/dev/null \
+    | sed -n 's/^Response: */  /p'
+}
+
 # --- confirmation ------------------------------------------------------------
 confirm_mainnet() {
   [ "$NETWORK" = mainnet ] || return 0
@@ -134,6 +162,15 @@ confirm_mainnet() {
 }
 
 preflight
+
+# Re-check an already-deployed instance without spending anything. Useful after
+# a deploy whose verification step itself was at fault, and as a standing audit.
+if [ -n "$VERIFY_ONLY" ]; then
+  ADDRESS="$VERIFY_ONLY"
+  verify_deployment
+  exit 0
+fi
+
 check_funding
 confirm_mainnet
 
@@ -147,12 +184,41 @@ say "Class hash $CLASS_HASH"
 # --- declare -----------------------------------------------------------------
 # Declaring a class that already exists is an error, not a no-op, so ask the
 # chain first. This also makes the script safe to re-run after a failed deploy.
-if rpc starknet_getClass "[\"latest\",\"$CLASS_HASH\"]" | grep -q '"result"'; then
+class_is_declared() {
+  rpc starknet_getClass "[\"latest\",\"$CLASS_HASH\"]" | grep -q '"result"'
+}
+
+# sncast returns as soon as the declare is SUBMITTED, but the class cannot be
+# queried — and so the deploy's fee cannot be estimated — until that block is
+# accepted. Deploying straight after a declare therefore fails with the
+# thoroughly misleading "Class ... is not declared", having already paid for a
+# declare that did in fact succeed. Wait for the class to actually appear.
+wait_for_class() {
+  printf '  waiting for the class to be accepted'
+  for _ in $(seq 1 60); do
+    if class_is_declared; then printf ' — done\n'; return 0; fi
+    printf '.'; sleep 5
+  done
+  printf '\n'
+  fail "the declare was submitted but the class has not appeared after 5 minutes.
+  It may still land. Re-run this script — it will skip the declare and deploy."
+}
+
+if class_is_declared; then
   echo "  already declared on $NETWORK — skipping declare"
 else
   say "Declaring"
   sncast --profile "$NETWORK" declare --contract-name AirlockBucketer $DRY_RUN \
     || fail "declare failed"
+  # A dry run declares nothing, so the class will never appear and the deploy
+  # below cannot be estimated against it. Stop here rather than report that
+  # absence as a failure.
+  if [ -n "$DRY_RUN" ]; then
+    say "Dry run — the declare fee is above. The deploy cannot be estimated until
+the class is really declared; it is the cheaper of the two by a wide margin."
+    exit 0
+  fi
+  wait_for_class
 fi
 
 # --- deploy ------------------------------------------------------------------
@@ -171,24 +237,7 @@ ADDRESS=$(echo "$OUT" | sed -n 's/^Contract Address: *//p')
 # --- verify ------------------------------------------------------------------
 # Read the constructor values back off the chain. A silently wrong pool or unit
 # is unrecoverable, so this is a real check, not a formality.
-say "Verifying $ADDRESS"
-check() { # function, expected, label
-  got=$(sncast --profile "$NETWORK" call --contract-address "$ADDRESS" --function "$1" 2>/dev/null \
-        | sed -n 's/^Response: *//p' | tr -d '[] ')
-  exp_dec=$(python3 -c "print(int('$2', 0))")
-  got_dec=$(python3 -c "print(int('${got:-0}', 0))" 2>/dev/null || echo x)
-  if [ "$exp_dec" = "$got_dec" ]; then printf '  \033[32mok\033[0m   %-6s %s\n' "$3" "$got"
-  else printf '  \033[31mBAD\033[0m  %-6s got %s, expected %s\n' "$3" "$got" "$2"; return 1; fi
-}
-rc=0
-check pool  "$POOL"  pool  || rc=1
-check token "$TOKEN" token || rc=1
-check unit  "$UNIT"  unit  || rc=1
-[ $rc -eq 0 ] || fail "on-chain state does not match what was requested — do NOT use this deployment"
-
-say "Ladder"
-sncast --profile "$NETWORK" call --contract-address "$ADDRESS" --function denominations 2>/dev/null \
-  | sed -n 's/^Response: */  /p'
+verify_deployment
 
 say "Deployed to $NETWORK"
 echo "  address     $ADDRESS"
