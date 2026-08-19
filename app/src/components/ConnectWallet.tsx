@@ -8,7 +8,7 @@
 import { useEffect, useRef } from 'react';
 import type { WalletSession } from '../hooks/useWallet';
 import type { Wallet } from '../lib/wallet';
-import { STRK20_MIN_READY, isBelow, rescanWallets, short } from '../lib/wallet';
+import { STRK20_MIN_READY, isBelow, isFirefox, rescanWallets, short } from '../lib/wallet';
 import { IconWallet } from './Icons';
 
 /* Open state is owned by the page, because the primary CTA in the transfer card
@@ -243,7 +243,22 @@ export function WalletNotice({ session }: { session: WalletSession }) {
         <strong>This wallet can't make private transfers yet.</strong> It
         connected fine — it just doesn't answer the STRK20 calls, so there is
         nothing here it can move.{' '}
-        {outdated ? (
+        {outdated && isFirefox() ? (
+          <>
+            You're on <strong>{conn.wallet.name} {v}</strong> and this needs{' '}
+            <strong>{STRK20_MIN_READY}</strong> — but Firefox's build stops at
+            5.30.0, so there is no update to install here. Ready ships{' '}
+            {STRK20_MIN_READY} on Chrome, Brave and Edge.{' '}
+            <a
+              href="https://chromewebstore.google.com/detail/ready-wallet-formerly-arg/dlcobpjiigpikoobohmabehhmhfoodbb"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Open this page in one of those
+            </a>{' '}
+            with Ready installed.
+          </>
+        ) : outdated ? (
           <>
             You're on <strong>{conn.wallet.name} {v}</strong>, and this needs{' '}
             <strong>{STRK20_MIN_READY}</strong> or newer.{' '}

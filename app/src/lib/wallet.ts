@@ -200,6 +200,18 @@ export function isBelow(version: string, minimum: string): boolean {
 
 export const STRK20_MIN_READY = '5.33.8';
 
+/* Firefox's Ready build tops out at 5.30.0 (AMO, checked 19 Aug 2026) while
+   Chrome's is 5.33.8. A Firefox user on 5.30.0 is therefore ALREADY current,
+   and telling them to update is advice that cannot be followed — they will go
+   to the add-on page, see no update, and conclude the dapp is broken.
+   Detection is on the engine rather than the brand, because every Chromium
+   browser gets the Chrome build. */
+export function isFirefox(): boolean {
+  return (
+    typeof navigator !== 'undefined' && /firefox|gecko\//i.test(navigator.userAgent)
+  );
+}
+
 function messageOf(e: unknown): string {
   if (e instanceof Error) return e.message;
   if (typeof e === 'string') return e;

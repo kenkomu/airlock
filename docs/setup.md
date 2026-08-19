@@ -68,3 +68,21 @@ Run from the `privacy-bridge` root:
 Two build scripts are blocked by the repo's supply-chain policy
 (`@reown/appkit`, `esbuild`). Builds and tests pass regardless; run
 `pnpm approve-builds` only if the Vite dev server misbehaves.
+
+## Browser matters, and not for the usual reasons
+
+STRK20 needs **Ready 5.33.8 or newer**. As of 19 August 2026:
+
+| Browser | Ready version | Private transfers |
+| --- | --- | --- |
+| Chrome / Brave / Edge | 5.33.8 | yes |
+| Firefox | 5.30.0 | **no** |
+
+Firefox's build is three minor versions behind and has no update to install, so
+a Firefox user is simultaneously fully up to date and unable to use the app.
+That is a confusing place to be, which is why the wallet notice detects Firefox
+and says so outright rather than advising an update that does not exist.
+
+Braavos and Keplr connect and are equally unable to make private transfers, for
+the same reason: they answer `Unknown request type: wallet_strk20Balances`.
+
