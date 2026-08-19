@@ -43,6 +43,10 @@ and `plan(847_000_000)` returns `500 + 250 + 50 + 25 + 10 + 10 + 1 + 1`, while
 `plan(847_320_000)` reverts `NOT_ON_LADDER` — the same results the local suite
 asserts, now confirmed against a deployed contract rather than a mock.
 
+The class is **source-verified on Voyager**, so the deployed bytecode can be
+checked against this repository rather than taken on trust:
+[sepolia.voyager.online/class/0x010ed58b…](https://sepolia.voyager.online/class/0x010ed58b30d78be2e4328abeb970c5d4650eb088ec1cf1d79a0ba81e4809c686)
+
 See [deploy.md](deploy.md).
 
 ## Chain constants
