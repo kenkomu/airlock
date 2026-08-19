@@ -9,6 +9,7 @@ import { useEffect, useRef } from 'react';
 import type { WalletSession } from '../hooks/useWallet';
 import type { Wallet } from '../lib/wallet';
 import { STRK20_MIN_READY, isBelow, isFirefox, rescanWallets, short } from '../lib/wallet';
+import { NETWORKS } from '../lib/networks';
 import { IconWallet } from './Icons';
 
 /* Open state is owned by the page, because the primary CTA in the transfer card
@@ -305,21 +306,54 @@ export function WalletNotice({ session }: { session: WalletSession }) {
   return null;
 }
 
-/* The network badge was a hardcoded "MAINNET", which is a lie the moment anyone
-   connects a wallet pointed elsewhere — and the one thing a user needs to be
-   certain of before signing. It now reports what the wallet actually said, and
-   says so plainly when that is a chain Airlock has no addresses for. */
+/* The network badge, which is also the network switch.
+ *
+ * It was a hardcoded "MAINNET" — a lie the moment anyone connects a wallet
+ * pointed elsewhere, and the one thing a user must be certain of before signing.
+ * Now it reports what the wallet actually said, and clicking it moves.
+ *
+ * Only offered when there is somewhere useful to go: a network Airlock has
+ * addresses for AND an anonymizer deployed on. Offering a switch to a chain
+ * where nothing works would just relocate the dead end.
+ */
 export function NetworkBadge({ session }: { session: WalletSession }) {
   if (session.state.phase !== 'connected') {
     return <span className="badge badge-net mono">NOT CONNECTED</span>;
   }
-  const { network, chainId } = session.state.conn;
-  if (!network) {
-    return <span className="badge badge-net mono" title={chainId}>UNKNOWN CHAIN</span>;
+  const { network, chainId, wallet } = session.state.conn;
+  const { switchTo, switching } = session;
+
+  const label = network
+    ? network.name.replace(/^Starknet ?/, '').toUpperCase() || 'MAINNET'
+    : 'UNKNOWN CHAIN';
+
+  /* Where a click should lead: the first network with a deployment that is not
+     the one we are on. Today that is Sepolia; when mainnet has one, this starts
+     offering the way back without any change here. */
+  const target = NETWORKS.find(
+    (n) => n.bucketers.length > 0 && n.chainId !== chainId,
+  );
+
+  if (!target) {
+    return (
+      <span className="badge badge-net mono" title={chainId}>
+        {label}
+      </span>
+    );
   }
+
+  const to = target.name.replace(/^Starknet ?/, '') || 'Mainnet';
   return (
-    <span className="badge badge-net mono">
-      {network.name.replace(/^Starknet ?/, '').toUpperCase() || 'MAINNET'}
-    </span>
+    <button
+      type="button"
+      className="badge badge-net badge-switch mono"
+      onClick={() => void switchTo(target.chainId)}
+      disabled={switching}
+      title={`${wallet.name} is on ${label.toLowerCase()} — switch to ${to}`}
+    >
+      {switching ? 'SWITCHING…' : label}
+      {!switching && <span className="badge-to">→ {to.toUpperCase()}</span>}
+    </button>
   );
 }
+

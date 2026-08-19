@@ -302,6 +302,38 @@ export async function connect(wallet: Wallet): Promise<Connection> {
   };
 }
 
+/* Ask the wallet to change network.
+ *
+ * The wallet decides — it prompts, and the user can refuse. `false` and a thrown
+ * rejection both mean "still on the old chain", so neither is treated as
+ * success. Reconnecting afterwards is the caller's job, because the chain id,
+ * the provider, the account and the shielded balances all change together and a
+ * half-updated Connection is worse than none.
+ */
+export async function switchNetwork(
+  wallet: Wallet,
+  chainId: string,
+): Promise<boolean> {
+  const ok = await walletV6.switchStarknetChain(
+    wallet,
+    chainId as constants.StarknetChainId,
+  );
+  return ok !== false;
+}
+
+/* Wallets emit a change event when the user switches network or account from
+   inside the extension. Without this, the app keeps showing MAINNET while the
+   wallet is on Sepolia — the one thing the badge exists to be right about. */
+export function onWalletChange(wallet: Wallet, cb: () => void): () => void {
+  try {
+    return walletV6.subscribeWalletEvent(wallet, () => cb());
+  } catch {
+    /* A wallet without standard:events cannot tell us; the badge then only
+       updates on reconnect, which is worse but not wrong. */
+    return () => {};
+  }
+}
+
 export async function refreshBalances(c: Connection): Promise<ShieldedBalance[]> {
   return toBalances(await c.account.strk20Balances([]));
 }

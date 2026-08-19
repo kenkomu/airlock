@@ -55,6 +55,38 @@
   background: var(--accent-wash);
 }
 
+/* The badge is also the switch when there is somewhere to switch to. It reads
+   as a badge until hovered, because its first job is stating the network — a
+   control that shouts would compete with the connect button beside it. */
+.badge-switch {
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s2);
+  transition: border-color var(--t), background var(--t);
+}
+.badge-switch:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+.badge-switch:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+/* The destination stays hidden until the badge invites a click, so the resting
+   state is a clean statement of the current network. */
+.badge-to {
+  opacity: 0;
+  max-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  transition: opacity var(--t), max-width var(--t);
+}
+.badge-switch:hover .badge-to,
+.badge-switch:focus-visible .badge-to {
+  opacity: 0.75;
+  max-width: 12ch;
+}
+
 .btn {
   min-height: 44px; /* touch target */
   padding: 0 var(--s4);
