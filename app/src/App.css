@@ -84,7 +84,12 @@
 .badge-switch:hover .badge-to,
 .badge-switch:focus-visible .badge-to {
   opacity: 0.75;
-  max-width: 12ch;
+  max-width: 16ch;
+}
+/* A dot beside the destination when it has no anonymizer. Quiet, because it is
+   a caveat rather than a refusal — the tooltip carries the sentence. */
+.badge-warn {
+  color: var(--warn, #d8a657);
 }
 
 .btn {

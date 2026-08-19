@@ -327,12 +327,16 @@ export function WalletNotice({ session }: { session: WalletSession }) {
 /* The network badge, which is also the network switch.
  *
  * It was a hardcoded "MAINNET" — a lie the moment anyone connects a wallet
- * pointed elsewhere, and the one thing a user must be certain of before signing.
- * Now it reports what the wallet actually said, and clicking it moves.
+ * pointed elsewhere, and the one thing a user must be certain of before
+ * signing. Now it reports what the wallet said, and clicking it moves.
  *
- * Only offered when there is somewhere useful to go: a network Airlock has
- * addresses for AND an anonymizer deployed on. Offering a switch to a chain
- * where nothing works would just relocate the dead end.
+ * An earlier version only offered networks that had an anonymizer deployed, on
+ * the reasoning that sending someone to a dead end is unhelpful. That made the
+ * badge inert on Sepolia, because mainnet has no deployment yet — so a control
+ * that had just worked stopped working, with nothing to explain why. A switch
+ * that sometimes silently is not a switch is worse than one that occasionally
+ * takes you somewhere unfinished. It now always moves; whether the destination
+ * has an anonymizer is said out loud instead.
  */
 export function NetworkBadge({ session }: { session: WalletSession }) {
   if (session.state.phase !== 'connected') {
@@ -341,18 +345,17 @@ export function NetworkBadge({ session }: { session: WalletSession }) {
   const { network, chainId, wallet } = session.state.conn;
   const { switchTo, switching } = session;
 
-  const label = network
-    ? network.name.replace(/^Starknet ?/, '').toUpperCase() || 'MAINNET'
-    : 'UNKNOWN CHAIN';
+  const shortName = (n: { name: string }) =>
+    n.name.replace(/^Starknet ?/, '') || 'Mainnet';
 
-  /* Where a click should lead: the first network with a deployment that is not
-     the one we are on. Today that is Sepolia; when mainnet has one, this starts
-     offering the way back without any change here. */
-  const target = NETWORKS.find(
-    (n) => n.bucketers.length > 0 && n.chainId !== chainId,
-  );
+  const label = network ? shortName(network).toUpperCase() : 'UNKNOWN CHAIN';
 
-  if (!target) {
+  /* With two networks this is a toggle. Written as "the next one along" so a
+     third network needs no change here. */
+  const i = NETWORKS.findIndex((n) => BigInt(n.chainId) === BigInt(chainId));
+  const target = NETWORKS[(i + 1) % NETWORKS.length];
+
+  if (!target || (i >= 0 && NETWORKS.length < 2)) {
     return (
       <span className="badge badge-net mono" title={chainId}>
         {label}
@@ -360,18 +363,28 @@ export function NetworkBadge({ session }: { session: WalletSession }) {
     );
   }
 
-  const to = target.name.replace(/^Starknet ?/, '') || 'Mainnet';
+  const to = shortName(target);
+  const ready = target.bucketers.length > 0;
   return (
     <button
       type="button"
       className="badge badge-net badge-switch mono"
       onClick={() => void switchTo(target.chainId)}
       disabled={switching}
-      title={`${wallet.name} is on ${label.toLowerCase()} — switch to ${to}`}
+      title={
+        `${wallet.name} is on ${label.toLowerCase()}. Switch to ${to}` +
+        (ready ? '.' : ' — no anonymizer deployed there yet.')
+      }
     >
       {switching ? 'SWITCHING…' : label}
-      {!switching && <span className="badge-to">→ {to.toUpperCase()}</span>}
+      {!switching && (
+        <span className="badge-to">
+          → {to.toUpperCase()}
+          {!ready && <span className="badge-warn"> ·</span>}
+        </span>
+      )}
     </button>
   );
 }
+
 
