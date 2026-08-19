@@ -69,20 +69,22 @@ export interface Connection {
   balances: ShieldedBalance[];
 }
 
-/* Discovery runs three ways, and only one of them is self-updating.
+/* Discovery runs three ways, and TWO of them only look once.
  *
- *   - **wallet-standard**: the wallet announces itself. Event-driven, so a
- *     wallet that registers late still arrives.
- *   - **EIP-6963**: MetaMask, through the virtual-wallet adapter. Also
- *     event-driven.
- *   - **injected**: the legacy `window.starknet_*` objects, which is how Ready
- *     and Braavos still appear. This one is a ONE-SHOT scan of `window` at
- *     store construction — see `registerInjectedWalletDiscovery`. An extension
- *     that injects a moment after page load is simply never seen.
+ *   - **injected**: the legacy `window.starknet_*` objects. A one-shot scan of
+ *     `window` at store construction — see `registerInjectedWalletDiscovery`.
+ *   - **wallet-standard**: the store adds a lasting `register-wallet` listener,
+ *     then dispatches `app-ready` ONCE. A wallet that volunteers a
+ *     register-wallet of its own is fine forever; a wallet that only *answers*
+ *     app-ready is heard only if its content script beat us to the page.
+ *   - **EIP-6963**: MetaMask, through the virtual-wallet adapter. Genuinely
+ *     event-driven, which is why MetaMask kept appearing while Ready did not.
  *
- * That last point is why the picker showed a single wallet. The store exposes
- * `_refreshInjectedWallets()` for exactly this case, so re-scan for a few
- * seconds after mount rather than trusting one scan to have caught everyone.
+ * Both one-shot paths lose the same race, against any extension slower than the
+ * page. So both get repeated: `_refreshInjectedWallets()` re-scans, and
+ * `announcePage()` re-announces. Verified by injecting a wallet that only
+ * listens for app-ready, after the page had already announced itself: missing
+ * without the re-announce, listed with it.
  *
  * MetaMask is no longer excluded. Passing `eip1193Adapters: []` removed it from
  * discovery altogether, which is a heavier price than the problem it avoided:
@@ -90,7 +92,52 @@ export interface Connection {
  * and cannot see is worse than one that asks a question.
  */
 const REFRESH_MS = 400;
-const REFRESH_FOR_MS = 6000;
+const REFRESH_FOR_MS = 8000;
+
+/* The wallet-standard handshake, dispatched again.
+ *
+ * `createStore` announces the page once, at construction: it adds a persistent
+ * listener for `wallet-standard:register-wallet`, then dispatches a single
+ * `wallet-standard:app-ready`. A wallet whose content script has not run yet
+ * misses that announcement — and if it only *listens* for app-ready rather than
+ * volunteering a register-wallet of its own, it is never seen again. One
+ * announcement is a race the page loses whenever an extension is slower than it.
+ *
+ * Re-announcing fixes it without touching the library's bookkeeping. A wallet
+ * that hears a later app-ready replies by dispatching `register-wallet`, and the
+ * listener the store installed is still there to catch it. We deliberately do
+ * not pass our own registration API: the store owns the wallet list, and a
+ * second one would be a list nothing reads.
+ */
+function announcePage(): void {
+  if (typeof window === 'undefined') return;
+
+  /* A wallet answering app-ready reads `detail.register` and calls it, so the
+     event must carry a real registration API — a bare Event would throw inside
+     the wallet. Ours forwards: it re-emits each wallet as a `register-wallet`
+     event, which is what the store is already listening for. That way the store
+     stays the single owner of the wallet list and we add no bookkeeping of our
+     own to fall out of sync with it. */
+  const detail = Object.freeze({
+    register: (...wallets: unknown[]) => {
+      window.dispatchEvent(
+        new CustomEvent('wallet-standard:register-wallet', {
+          detail: (storeApi: { register: (...w: unknown[]) => unknown }) =>
+            storeApi.register(...wallets),
+        }),
+      );
+      return () => {};
+    },
+  });
+
+  const event = new CustomEvent('wallet-standard:app-ready', {
+    detail,
+    bubbles: false,
+    cancelable: false,
+    composed: false,
+  });
+  window.dispatchEvent(event);
+}
 
 export function watchWallets(onChange: (wallets: Wallet[]) => void): () => void {
   const store: Store = createStore();
@@ -99,12 +146,14 @@ export function watchWallets(onChange: (wallets: Wallet[]) => void): () => void 
   publish(store.getWallets());
   const unsubscribe = store.subscribe(publish);
 
-  /* Extensions register over the first few seconds. Polling stops rather than
-     running forever: an interval that never clears is a background cost on a
+  /* Both discovery paths need the same nudge, for the same reason: an extension
+     that loads after the page has already looked. Polling stops rather than
+     running forever — an interval that never clears is a background cost on a
      page someone may leave open. */
   const started = Date.now();
   const timer = setInterval(() => {
     store._refreshInjectedWallets();
+    announcePage();
     if (Date.now() - started > REFRESH_FOR_MS) clearInterval(timer);
   }, REFRESH_MS);
 
@@ -112,6 +161,13 @@ export function watchWallets(onChange: (wallets: Wallet[]) => void): () => void 
     clearInterval(timer);
     unsubscribe();
   };
+}
+
+/* Called when the picker opens. Someone who installs a wallet and comes back to
+   an open tab is past the polling window, and telling them to reload is asking
+   them to work around our timing choices. */
+export function rescanWallets(): void {
+  announcePage();
 }
 
 function messageOf(e: unknown): string {

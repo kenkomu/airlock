@@ -8,7 +8,7 @@
 import { useEffect, useRef } from 'react';
 import type { WalletSession } from '../hooks/useWallet';
 import type { Wallet } from '../lib/wallet';
-import { short } from '../lib/wallet';
+import { rescanWallets, short } from '../lib/wallet';
 import { IconWallet } from './Icons';
 
 /* Open state is owned by the page, because the primary CTA in the transfer card
@@ -31,6 +31,13 @@ export function ConnectWallet({
     if (state.phase === 'connected') setOpen(false);
   }, [state.phase, setOpen]);
 
+  /* Ask again every time the picker opens. Someone who installs a wallet and
+     comes back to a tab that was already open is long past the discovery
+     window, and "reload the page" is asking them to work around our timing. */
+  useEffect(() => {
+    if (open) rescanWallets();
+  }, [open]);
+
   useEffect(() => {
     if (!open) return;
     closeRef.current?.focus();
@@ -46,7 +53,7 @@ export function ConnectWallet({
     /* The dot carries the state the address cannot: connected is not the same
        as usable, and a wallet on the wrong network or without STRK20 support
        should not look identical to one that is ready. */
-    const ok = conn.onMainnet && conn.support.kind === 'ready';
+    const ok = conn.network !== undefined && conn.support.kind === 'ready';
     return (
       <button
         type="button"
