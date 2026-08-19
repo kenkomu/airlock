@@ -152,3 +152,4 @@ vite.config.ts.timestamp-*
 *keystore*.json
 *accounts*.json
 !**/package.json
+connected.png
