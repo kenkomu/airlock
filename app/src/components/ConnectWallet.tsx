@@ -8,7 +8,7 @@
 import { useEffect, useRef } from 'react';
 import type { WalletSession } from '../hooks/useWallet';
 import type { Wallet } from '../lib/wallet';
-import { rescanWallets, short } from '../lib/wallet';
+import { STRK20_MIN_READY, isBelow, rescanWallets, short } from '../lib/wallet';
 import { IconWallet } from './Icons';
 
 /* Open state is owned by the page, because the primary CTA in the transfer card
@@ -232,15 +232,41 @@ export function WalletNotice({ session }: { session: WalletSession }) {
       </p>
     );
 
-  if (conn.support.kind === 'unsupported')
+  if (conn.support.kind === 'unsupported') {
+    /* The version is the whole message. "This wallet can't do STRK20" leaves
+       someone with nowhere to go; "you have 5.31.0, you need 5.33.8" is a
+       thing they can act on in a minute. */
+    const v = conn.walletVersion;
+    const outdated = v !== undefined && isBelow(v, STRK20_MIN_READY);
     return (
       <p className="notice notice-blocked sm" role="status">
-        <strong>This wallet can't make private transfers.</strong> It connected
-        fine — it just doesn't support STRK20 yet, so there's nothing here it can
-        move. Ready 5.33.8 and newer do. (It answered:{' '}
-        <span className="mono">{conn.support.message}</span>.)
+        <strong>This wallet can't make private transfers yet.</strong> It
+        connected fine — it just doesn't answer the STRK20 calls, so there is
+        nothing here it can move.{' '}
+        {outdated ? (
+          <>
+            You're on <strong>{conn.wallet.name} {v}</strong>, and this needs{' '}
+            <strong>{STRK20_MIN_READY}</strong> or newer.{' '}
+            <a href="https://www.ready.co/" target="_blank" rel="noreferrer">
+              Update it
+            </a>{' '}
+            and reconnect.
+          </>
+        ) : (
+          <>
+            {v !== undefined && (
+              <>
+                You're on {conn.wallet.name} <span className="mono">{v}</span>.{' '}
+              </>
+            )}
+            Private transfers need Ready {STRK20_MIN_READY} or newer; other
+            wallets are still adding support.
+          </>
+        )}{' '}
+        <span className="muted">({conn.support.message})</span>
       </p>
     );
+  }
 
   if (conn.support.kind === 'unregistered')
     return (

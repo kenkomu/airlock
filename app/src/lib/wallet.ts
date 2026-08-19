@@ -56,6 +56,10 @@ export interface ShieldedBalance {
 
 export interface Connection {
   wallet: Wallet;
+  /* What the wallet says it is. Surfaced because "this wallet cannot do STRK20"
+     is not actionable on its own — the version is what tells someone whether to
+     update or to stop trying. */
+  walletVersion: string | undefined;
   account: WalletAccountV6;
   address: string;
   chainId: string;
@@ -170,6 +174,32 @@ export function rescanWallets(): void {
   announcePage();
 }
 
+/* The wallet-standard feature carries the extension's own version string. */
+export function walletVersionOf(wallet: Wallet): string | undefined {
+  const api = wallet.features?.['starknet:walletApi'] as
+    | { walletVersion?: unknown }
+    | undefined;
+  return typeof api?.walletVersion === 'string' ? api.walletVersion : undefined;
+}
+
+/* STRK20 landed in Ready 5.33.8. Comparing numerically rather than by string
+   because '5.9.0' sorts above '5.33.8' lexicographically, which would tell
+   someone on an older build that they are already up to date. */
+export function isBelow(version: string, minimum: string): boolean {
+  const parse = (v: string) =>
+    v.split(/[.\-+]/).map((n) => Number.parseInt(n, 10) || 0);
+  const a = parse(version);
+  const b = parse(minimum);
+  for (let i = 0; i < Math.max(a.length, b.length); i++) {
+    const x = a[i] ?? 0;
+    const y = b[i] ?? 0;
+    if (x !== y) return x < y;
+  }
+  return false;
+}
+
+export const STRK20_MIN_READY = '5.33.8';
+
 function messageOf(e: unknown): string {
   if (e instanceof Error) return e.message;
   if (typeof e === 'string') return e;
@@ -248,6 +278,7 @@ export async function connect(wallet: Wallet): Promise<Connection> {
 
   return {
     wallet,
+    walletVersion: walletVersionOf(wallet),
     account,
     address,
     chainId,
