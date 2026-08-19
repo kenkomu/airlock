@@ -25,17 +25,20 @@ import {
 import { createStore, type Store } from '@starknet-io/get-starknet-discovery';
 import type { WalletWithStarknetFeatures } from '@starknet-io/get-starknet-wallet-standard/features';
 import { TOKENS } from './pool';
+import { NETWORKS, networkFor, type Network } from './networks';
 
 export type Wallet = WalletWithStarknetFeatures;
 
-/* Same endpoints as the public pool reads, for the same reason: one provider
-   rate-limits and the app should fail over rather than look broken. */
-const RPC_URLS = [
-  'https://rpc.starknet.lava.build',
-  'https://api.cartridge.gg/x/starknet/mainnet',
-];
+/* Mainnet, for the reads the page makes before anyone connects. Once a wallet
+   is connected, every read uses the provider for the chain that wallet is
+   actually on — see `connect`. Probing mainnet while the wallet sits on Sepolia
+   reports the wrong capability confidently, which is worse than reporting
+   nothing. */
+export const provider = new RpcProvider({ nodeUrl: NETWORKS[0].rpcUrls[0] });
 
-export const provider = new RpcProvider({ nodeUrl: RPC_URLS[0] });
+export function providerFor(network: Network): RpcProvider {
+  return new RpcProvider({ nodeUrl: network.rpcUrls[0] });
+}
 
 /* What the connected wallet can actually do, as opposed to what it claims. */
 export type Strk20Support =
@@ -57,6 +60,11 @@ export interface Connection {
   address: string;
   chainId: string;
   onMainnet: boolean;
+  /* Undefined on a chain Airlock has no addresses for. Kept undefined rather
+     than defaulted to mainnet: a wrong-network default is how an app spends
+     real money on a chain the user did not pick. */
+  network: Network | undefined;
+  provider: RpcProvider;
   support: Strk20Support;
   balances: ShieldedBalance[];
 }
@@ -111,16 +119,25 @@ function toBalances(raw: unknown): ShieldedBalance[] {
 }
 
 export async function connect(wallet: Wallet): Promise<Connection> {
-  const account = await WalletAccountV6.connect(provider, wallet);
+  /* Chain first, then the provider for it. `requestChainId` needs only the
+     wallet, so there is no ordering problem here — and building the account
+     against a mainnet provider while the wallet is on Sepolia would make every
+     subsequent read answer about the wrong chain. */
+  const chainId = String(await walletV6.requestChainId(wallet));
+  const network = networkFor(chainId);
+  const chainProvider = network ? providerFor(network) : provider;
+
+  const account = await WalletAccountV6.connect(chainProvider, wallet);
 
   const accounts = await walletV6.requestAccounts(wallet);
   const address = validateAndParseAddress(
     Array.isArray(accounts) && accounts.length > 0 ? accounts[0] : account.address,
   );
-  const chainId = String(await walletV6.requestChainId(wallet));
   const onMainnet = chainId === constants.StarknetChainId.SN_MAIN;
 
-  /* Read-only, unsigned, free. Doubles as the capability probe. */
+  /* Read-only, unsigned, free. Doubles as the capability probe — and now
+     reports on the chain the wallet is actually on, which is the only way to
+     learn whether this wallet does STRK20 on testnet. */
   let support: Strk20Support = { kind: 'ready' };
   let balances: ShieldedBalance[] = [];
   try {
@@ -129,7 +146,17 @@ export async function connect(wallet: Wallet): Promise<Connection> {
     support = classify(e);
   }
 
-  return { wallet, account, address, chainId, onMainnet, support, balances };
+  return {
+    wallet,
+    account,
+    address,
+    chainId,
+    onMainnet,
+    network,
+    provider: chainProvider,
+    support,
+    balances,
+  };
 }
 
 export async function refreshBalances(c: Connection): Promise<ShieldedBalance[]> {
