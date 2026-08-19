@@ -115,16 +115,16 @@ export function ConnectWallet({
               </ul>
             ) : (
               <p className="sm muted">
-                No Starknet wallet detected. STRK20 needs a privacy-enabled
-                build —{' '}
+                No Starknet wallet found in this browser. Private transfers need
+                a wallet that supports them —{' '}
                 <a href="https://www.ready.co/" target="_blank" rel="noreferrer">
                   Ready
                 </a>{' '}
-                5.33.8 or later, or{' '}
+                5.33.8 or newer, or{' '}
                 <a href="https://www.xverse.app/" target="_blank" rel="noreferrer">
                   Xverse
                 </a>
-                .
+                . Install one and this list will fill in on its own.
               </p>
             )}
 
@@ -135,8 +135,8 @@ export function ConnectWallet({
             )}
 
             <p className="muted sm">
-              Airlock never sees your viewing key. The wallet holds it and
-              proves with it.
+              Your viewing key stays in your wallet. Airlock never sees it — the
+              wallet does the proving.
             </p>
           </div>
         </div>
@@ -145,44 +145,56 @@ export function ConnectWallet({
   );
 }
 
-/* Everything the connection cannot do, said once, at the top. Each of these was
-   a real dead end during development; none of them announce themselves. */
+/* Everything the connection cannot do, said once, at the top.
+ *
+ * Each of these was a real dead end during development, and none of them
+ * announce themselves — a wallet that cannot do STRK20 connects perfectly and
+ * then fails at the one thing you wanted. So each notice says what happened,
+ * why, and the single next thing to do. No jargon the user did not choose:
+ * "viewing key" is unavoidable because it is what the wallet's own screen calls
+ * it, but "nullifier" and "UTXO" are ours to keep out of their way.
+ */
 export function WalletNotice({ session }: { session: WalletSession }) {
   if (session.state.phase !== 'connected') return null;
   const { conn } = session.state;
 
-  if (!conn.onMainnet)
+  /* Was `!conn.onMainnet`, which started telling people to switch to mainnet
+     while they were on Sepolia — a network Airlock now fully supports, and the
+     one the anonymizer is actually deployed on. The real question is whether we
+     have addresses for this chain, not whether it is mainnet. */
+  if (!conn.network)
     return (
       <p className="notice notice-leak sm" role="status">
-        <strong>Wrong network.</strong> The STRK20 pool this app reads lives on
-        Starknet mainnet. Switch your wallet's network to continue.
+        <strong>Airlock doesn't know this network.</strong> Switch your wallet to
+        Starknet mainnet or Sepolia and it will pick up from there.
       </p>
     );
 
   if (conn.support.kind === 'unsupported')
     return (
       <p className="notice notice-blocked sm" role="status">
-        <strong>This wallet cannot do STRK20.</strong> It connected, but it
-        answers <span className="mono">{conn.support.message}</span>. STRK20
-        support landed in Ready 5.33.8 — older builds and Braavos connect fine
-        and then cannot move anything privately.
+        <strong>This wallet can't make private transfers.</strong> It connected
+        fine — it just doesn't support STRK20 yet, so there's nothing here it can
+        move. Ready 5.33.8 and newer do. (It answered:{' '}
+        <span className="mono">{conn.support.message}</span>.)
       </p>
     );
 
   if (conn.support.kind === 'unregistered')
     return (
       <p className="notice notice-leak sm" role="status">
-        <strong>No viewing key registered.</strong> This account has never
-        registered with the pool, so it has no private balance to read. Shield
-        once from your wallet's own privacy screen — that registers the key as
-        part of the deposit.
+        <strong>This account isn't set up for private balances yet.</strong> An
+        account registers with the pool once, the first time it shields
+        something, and your wallet handles that for you. Shield any amount from
+        your wallet's privacy screen and your balance will show up here.
       </p>
     );
 
   if (conn.support.kind === 'unknown')
     return (
       <p className="notice notice-leak sm" role="status">
-        <strong>Could not read your shielded balance.</strong>{' '}
+        <strong>Couldn't read your private balance.</strong> The wallet is
+        connected, so this is worth retrying before anything else.{' '}
         <span className="mono">{conn.support.message}</span>
       </p>
     );
