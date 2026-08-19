@@ -1713,3 +1713,51 @@ main > .notice {
 main > .card {
   margin-bottom: var(--s4);
 }
+
+/* ---------- account sheet ---------- */
+
+.acct-id {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+}
+/* The full address, not a truncation. Someone opening this panel wants the
+   whole thing — to copy it, or to check it against another screen. */
+.acct-addr {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  width: 100%;
+  padding: var(--s3);
+  border-radius: 12px;
+  border: 1px solid var(--border-soft);
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 0.78rem;
+  line-height: 1.5;
+  word-break: break-all;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color var(--t);
+}
+.acct-addr:hover {
+  border-color: var(--accent-dim);
+}
+.acct-copy {
+  margin-left: auto;
+  flex-shrink: 0;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-3);
+}
+.acct-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+}
+.acct-group-h {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+}

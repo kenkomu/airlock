@@ -5,12 +5,13 @@
  * nothing is detected it says so and links the two wallets that work.
  */
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { WalletSession } from '../hooks/useWallet';
 import type { Wallet } from '../lib/wallet';
 import { STRK20_MIN_READY, isBelow, isFirefox, rescanWallets, short } from '../lib/wallet';
 import { NETWORKS } from '../lib/networks';
 import { IconWallet } from './Icons';
+import { AccountSheet } from './AccountSheet';
 
 /* Open state is owned by the page, because the primary CTA in the transfer card
    opens this same picker. Two buttons, one dialog. */
@@ -24,6 +25,7 @@ export function ConnectWallet({
   setOpen: (v: boolean) => void;
 }) {
   const closeRef = useRef<HTMLButtonElement>(null);
+  const [accountOpen, setAccountOpen] = useState(false);
 
   const { state, wallets, connect, disconnect } = session;
   const connecting = state.phase === 'connecting';
@@ -56,16 +58,32 @@ export function ConnectWallet({
        should not look identical to one that is ready. */
     const ok = conn.network !== undefined && conn.support.kind === 'ready';
     return (
-      <button
-        type="button"
-        className="addr-pill"
-        onClick={disconnect}
-        title={`${conn.address} — click to disconnect`}
-      >
-        <span className={`addr-dot${ok ? ' addr-dot-ok' : ' addr-dot-warn'}`} />
-        <span className="mono">{short(conn.address)}</span>
-        <span className="addr-off">Disconnect</span>
-      </button>
+      <>
+        {/* Opens the account, rather than disconnecting. Clicking the thing you
+            want to LOOK at should not destroy it — disconnect lives inside,
+            where it is a deliberate choice instead of a misfire. */}
+        <button
+          type="button"
+          className="addr-pill"
+          onClick={() => setAccountOpen(true)}
+          title={`${conn.address} — balances and details`}
+        >
+          <span className={`addr-dot${ok ? ' addr-dot-ok' : ' addr-dot-warn'}`} />
+          <span className="mono">{short(conn.address)}</span>
+          <span className="addr-off">Details</span>
+        </button>
+        {accountOpen && (
+          <AccountSheet
+            conn={conn}
+            shielded={session.balances}
+            onClose={() => setAccountOpen(false)}
+            onDisconnect={() => {
+              setAccountOpen(false);
+              disconnect();
+            }}
+          />
+        )}
+      </>
     );
   }
 

@@ -334,6 +334,40 @@ export function onWalletChange(wallet: Wallet, cb: () => void): () => void {
   }
 }
 
+/* Public, on-chain balances — what the world can see.
+ *
+ * Shown beside the shielded ones deliberately. The difference between the two
+ * columns IS the product: one is visible to anyone reading the chain, the other
+ * is not. A privacy tool that only ever shows you the private number lets you
+ * forget how much you are still exposing.
+ */
+export async function publicBalances(
+  provider: RpcProvider,
+  owner: string,
+  tokens: { token: string; symbol: string; decimals: number }[],
+): Promise<ShieldedBalance[]> {
+  const results = await Promise.all(
+    tokens.map(async (t) => {
+      try {
+        const r = await provider.callContract({
+          contractAddress: t.token,
+          entrypoint: 'balance_of',
+          calldata: [owner],
+        });
+        /* u256 comes back as [low, high]; anything above 2^128 would be an
+           absurd balance, but reconstructing properly costs one line. */
+        const low = BigInt(r[0] ?? '0x0');
+        const high = BigInt(r[1] ?? '0x0');
+        return { ...t, amount: (high << 128n) + low };
+      } catch {
+        /* One unreadable token must not blank the others. */
+        return { ...t, amount: 0n };
+      }
+    }),
+  );
+  return results;
+}
+
 export async function refreshBalances(c: Connection): Promise<ShieldedBalance[]> {
   return toBalances(await c.account.strk20Balances([]));
 }
