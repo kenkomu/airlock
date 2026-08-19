@@ -9,7 +9,8 @@ import { assess } from './lib/exposure';
 import { planBuckets } from './lib/buckets';
 import { byId } from './lib/chains';
 import { IconShield } from './components/Icons';
-import { ConnectWallet, WalletNotice } from './components/ConnectWallet';
+import { DenominatePanel } from './components/DenominatePanel';
+import { ConnectWallet, WalletNotice, NetworkBadge } from './components/ConnectWallet';
 import { useWallet } from './hooks/useWallet';
 
 const INITIAL: TransferState = {
@@ -51,7 +52,7 @@ export default function App() {
           <span className="brand-name">AIRLOCK</span>
         </div>
         <div className="top-right">
-          <span className="badge badge-net mono">MAINNET</span>
+          <NetworkBadge session={session} />
           <ConnectWallet session={session} open={pickerOpen} setOpen={setPickerOpen} />
         </div>
       </header>
@@ -74,6 +75,8 @@ export default function App() {
             anonymity panel is neither — it describes the pool, not this
             transfer — so it spans full width instead of padding a column. */}
         <WalletNotice session={session} />
+
+        <DenominatePanel session={session} />
 
         <div className="grid-main">
           <TransferPanel

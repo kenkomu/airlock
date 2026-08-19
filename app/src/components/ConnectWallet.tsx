@@ -189,3 +189,22 @@ export function WalletNotice({ session }: { session: WalletSession }) {
 
   return null;
 }
+
+/* The network badge was a hardcoded "MAINNET", which is a lie the moment anyone
+   connects a wallet pointed elsewhere — and the one thing a user needs to be
+   certain of before signing. It now reports what the wallet actually said, and
+   says so plainly when that is a chain Airlock has no addresses for. */
+export function NetworkBadge({ session }: { session: WalletSession }) {
+  if (session.state.phase !== 'connected') {
+    return <span className="badge badge-net mono">NOT CONNECTED</span>;
+  }
+  const { network, chainId } = session.state.conn;
+  if (!network) {
+    return <span className="badge badge-net mono" title={chainId}>UNKNOWN CHAIN</span>;
+  }
+  return (
+    <span className="badge badge-net mono">
+      {network.name.replace(/^Starknet ?/, '').toUpperCase() || 'MAINNET'}
+    </span>
+  );
+}

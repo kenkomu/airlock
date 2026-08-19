@@ -1647,3 +1647,10 @@ body::before {
 main > .notice {
   margin-bottom: var(--s4);
 }
+
+/* A card sitting directly in main gets the rhythm .grid-main gives its own
+   children. Without this the first such card butts straight into the grid
+   below it, which reads as two halves of one broken card. */
+main > .card {
+  margin-bottom: var(--s4);
+}
