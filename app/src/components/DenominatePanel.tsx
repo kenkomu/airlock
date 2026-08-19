@@ -120,7 +120,9 @@ export function DenominatePanel({ session }: { session: WalletSession }) {
       <section className="card" aria-labelledby="den-h">
         <header className="card-h"><h2 id="den-h">Denominate</h2></header>
         <p className="err">
-          No anonymizer is deployed on {network.name} yet. The contract is live on Sepolia.
+          <strong>Nothing to route through on {network.name} yet.</strong> The
+          anonymizer is live on Starknet Sepolia — switch your wallet's network
+          there and this panel will pick it up. Mainnet is next.
         </p>
       </section>
     );
