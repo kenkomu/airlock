@@ -17,12 +17,14 @@
 //! - `plan` and `denominations` come from the chain, so the ladder the client
 //!   trusts is the ladder that is really there.
 //!
-//! What it does NOT buy, and must not be claimed to: the pool never calls us
-//! here. `_apply_actions` runs behind a proven entry point that needs a STARK
-//! proof from the proving service, which a fork cannot produce. So the pool's
-//! own accounting — the open-note counter, `UNDEPOSITED_OPEN_NOTES` — is still
-//! only covered by `MockPool`. A wallet round trip is the only thing that
-//! closes that, and nothing here should be read as having closed it.
+//! What it does NOT buy: the pool never calls us here — these tests drive the
+//! bucketer directly with the pool's address as the caller.
+//!
+//! This file used to claim that the pool COULD not call us on a fork, because
+//! its entry point needed a STARK proof no fork can produce. That was wrong.
+//! `validate_proof` does not verify a proof; it checks properties of
+//! `tx_info.proof_facts`, a field `snforge` can set. `pool_fork_tests.cairo`
+//! takes that route and gets the real pool to call this contract for real.
 //!
 //! Pinned to a block so the test is deterministic. It needs network access, so
 //! it is excluded from the default run — see the `fork` profile.
