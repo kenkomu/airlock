@@ -136,7 +136,20 @@ export function TransferPanel({ onChange, session, onConnect }: Props) {
      different things and must not render the same. */
   const shielded = session.balances.find((b) => b.symbol === 'USDC');
   const conn = session.state.phase === 'connected' ? session.state.conn : null;
-  const usable = conn !== null && conn.onMainnet && conn.support.kind === 'ready';
+  /* This button cannot be enabled by anything the user does: the bridge legs are
+     not built. So the only question the label has to get right is WHOSE gap it
+     is naming, and it was getting that wrong in both directions.
+
+     It gated on `onMainnet`, so a perfectly capable wallet sitting on Sepolia —
+     the only network our anonymizer is actually deployed to — was told "Wallet
+     cannot do this yet". That is the same stale mainnet check already fixed on
+     the network notice and the connected pill; this was the third copy of it.
+
+     And when the check passed, the button still said "Continue" while being
+     disabled, which promises something that is not there. A wallet is only at
+     fault when it genuinely cannot speak STRK20. Everything else here is ours
+     to finish, and the label now says so. */
+  const walletCannot = conn !== null && conn.support.kind === 'unsupported';
 
   return (
     <section className="card card-action" aria-labelledby="tx-h">
@@ -352,13 +365,16 @@ export function TransferPanel({ onChange, session, onConnect }: Props) {
         </button>
       ) : (
         <button type="button" className="btn btn-primary btn-lg" disabled>
-          <IconWallet /> {usable ? 'Continue' : 'Wallet cannot do this yet'}
+          <IconWallet />{' '}
+          {walletCannot
+            ? 'This wallet does not speak STRK20 yet'
+            : 'Bridge legs not wired yet'}
         </button>
       )}
       <p className="muted sm center">
-        {usable
-          ? 'Bridge legs are not wired yet — connection and shielded reads are.'
-          : 'You approve each leg in your wallet. Airlock never chains them for you.'}
+        {walletCannot
+          ? 'Connection works; the shielded read did not. Update the wallet or try one that supports STRK20.'
+          : 'Cross-chain legs are still being built. Splitting a shielded balance works today — see Denominate above.'}
       </p>
     </section>
   );

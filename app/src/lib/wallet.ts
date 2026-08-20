@@ -63,7 +63,12 @@ export interface Connection {
   account: WalletAccountV6;
   address: string;
   chainId: string;
-  onMainnet: boolean;
+  /* No `onMainnet` here on purpose. It read as the obvious way to ask "can we
+     act?", and three separate places used it that way — the network notice, the
+     connected pill, and the transfer button — each telling a working Sepolia
+     wallet it was the broken one. What callers actually want is `network`:
+     whether Airlock has addresses for the chain the wallet is on. Compare
+     `chainId` directly if you genuinely mean mainnet and nothing else. */
   /* Undefined on a chain Airlock has no addresses for. Kept undefined rather
      than defaulted to mainnet: a wrong-network default is how an app spends
      real money on a chain the user did not pick. */
@@ -275,8 +280,6 @@ export async function connect(wallet: Wallet): Promise<Connection> {
   const address = validateAndParseAddress(
     Array.isArray(accounts) && accounts.length > 0 ? accounts[0] : account.address,
   );
-  const onMainnet = chainId === constants.StarknetChainId.SN_MAIN;
-
   /* Read-only, unsigned, free. Doubles as the capability probe — and now
      reports on the chain the wallet is actually on, which is the only way to
      learn whether this wallet does STRK20 on testnet. */
@@ -294,7 +297,6 @@ export async function connect(wallet: Wallet): Promise<Connection> {
     account,
     address,
     chainId,
-    onMainnet,
     network,
     provider: chainProvider,
     support,
