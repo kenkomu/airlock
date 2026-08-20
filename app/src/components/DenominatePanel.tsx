@@ -96,16 +96,24 @@ export function DenominatePanel({ session }: { session: WalletSession }) {
 
   if (!conn) {
     return (
-      <section className="card" aria-labelledby="den-h">
-        <header className="card-h"><h2 id="den-h">Denominate</h2></header>
-        <p className="muted">Connect a wallet to split a shielded balance into standard notes.</p>
+      <section className="card card-action card-hero" aria-labelledby="den-h">
+        <header className="card-h">
+          <h2 id="den-h">Denominate</h2>
+          <span className="card-h-note">live on Sepolia</span>
+        </header>
+        <p className="muted">
+          Split a shielded balance into standard note sizes, so no single
+          withdrawal carries an amount anyone can pick out. The split is read
+          from the deployed contract, not computed here.
+        </p>
+        <p className="muted sm">Connect a wallet to begin.</p>
       </section>
     );
   }
 
   if (!network) {
     return (
-      <section className="card" aria-labelledby="den-h">
+      <section className="card card-action card-hero" aria-labelledby="den-h">
         <header className="card-h"><h2 id="den-h">Denominate</h2></header>
         <p className="err">
           Airlock has no addresses for chain <span className="mono">{conn.chainId}</span>. Switch to
@@ -117,7 +125,7 @@ export function DenominatePanel({ session }: { session: WalletSession }) {
 
   if (!bucketer) {
     return (
-      <section className="card" aria-labelledby="den-h">
+      <section className="card card-action card-hero" aria-labelledby="den-h">
         <header className="card-h"><h2 id="den-h">Denominate</h2></header>
         <p className="err">
           <strong>Nothing to route through on {network.name} yet.</strong> The
@@ -131,7 +139,7 @@ export function DenominatePanel({ session }: { session: WalletSession }) {
   const busy = stage.at !== 'idle' && stage.at !== 'done' && stage.at !== 'failed';
 
   return (
-    <section className="card" aria-labelledby="den-h">
+    <section className="card card-action card-hero" aria-labelledby="den-h">
       <header className="card-h">
         <h2 id="den-h">Denominate</h2>
         <span className="card-h-note">{network.name}</span>

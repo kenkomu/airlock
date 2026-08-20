@@ -916,38 +916,6 @@ tr:last-child td {
   font-weight: 600;
 }
 
-/* ---------- route preview ---------- */
-.preview {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: var(--s3);
-  margin: 0;
-  padding: var(--s3) 0;
-  border-top: 1px solid var(--border-soft);
-  border-bottom: 1px solid var(--border-soft);
-}
-.preview > div {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  min-width: 0;
-}
-.preview dt {
-  display: flex;
-  align-items: center;
-  gap: var(--s1);
-  font-size: 0.66rem;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--text-3);
-  font-weight: 600;
-}
-.preview dd {
-  margin: 0;
-  font-size: 0.88rem;
-  color: var(--text);
-}
-
 /* ============================================================
    Depth and hierarchy pass.
    Flat dark surfaces at one elevation read as a wireframe: every
@@ -1282,25 +1250,12 @@ body::before {
   margin-left: auto;
 }
 
-/* Route needs more of the row than the two numeric columns beside it. */
-.preview {
-  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr) minmax(0, 1fr);
-}
 /* Wrap rather than clip: at 390px the nowrap route was cutting the
    destination chain off entirely, which is the one thing it exists to show. */
 .route {
   flex-wrap: wrap;
   white-space: normal;
 }
-@media (max-width: 640px) {
-  .preview {
-    grid-template-columns: 1fr 1fr;
-  }
-  .preview > div:first-child {
-    grid-column: 1 / -1;
-  }
-}
-
 /* ============================================================
    Confirmation-sheet pass.
    Three patterns taken from shipped swap and staking UIs, each
@@ -1765,4 +1720,76 @@ main > .card {
   display: flex;
   align-items: center;
   gap: var(--s2);
+}
+
+/* ---------- hierarchy: what runs, versus what is drawn ----------
+   The page has to answer "what actually works here" before it answers anything
+   else. These two rules are that answer: the live panel is given the weight,
+   and the unbuilt route is visibly held at arm's length rather than dressed to
+   match. Presenting them at equal weight is not neutral — the bigger, prettier
+   mockup wins by default, and it did. */
+
+.card-hero {
+  border-color: var(--accent-dim);
+  box-shadow: var(--shadow);
+}
+/* A hairline of accent along the top edge. Enough to mark primacy without
+   turning the card into a callout. */
+.card-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--accent), transparent 70%);
+  border-radius: var(--r-lg) var(--r-lg) 0 0;
+}
+.card-hero {
+  position: relative;
+}
+
+/* Deliberately quieter than the cards above it: no border of its own, dimmer
+   heading, and a tag that says outright it does not execute.
+
+   Named `next-up` rather than `preview` because `.preview` was already taken by
+   the route-detail row inside the transfer card. Reusing it silently turned
+   this section into a three-column grid with the cards stacked in the last
+   column and a void where the copy should be. */
+.next-up {
+  margin-top: var(--s7);
+  padding-top: var(--s5);
+  border-top: 1px solid var(--border-soft);
+}
+.next-up-h {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  flex-wrap: wrap;
+}
+.next-up-h h2 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-2);
+}
+.next-up-tag {
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--leak);
+  background: var(--leak-wash);
+  border: 1px solid color-mix(in srgb, var(--leak) 35%, transparent);
+  border-radius: var(--r-sm);
+  padding: 2px 8px;
+}
+.next-up-sub {
+  margin: var(--s2) 0 var(--s5);
+  color: var(--text-3);
+  font-size: 0.86rem;
+  max-width: 62ch;
+}
+/* The preview's own cards lose the accent border they inherit, so nothing
+   inside a "not wired yet" section reads as the live path. */
+.next-up .card-action {
+  border-color: var(--border);
 }

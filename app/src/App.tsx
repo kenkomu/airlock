@@ -71,27 +71,47 @@ export default function App() {
           </p>
         </section>
 
-        {/* Transfer and its report are a pair and belong side by side. The
-            anonymity panel is neither — it describes the pool, not this
-            transfer — so it spans full width instead of padding a column. */}
         <WalletNotice session={session} />
 
+        {/* Order is the claim. What runs today comes first and carries the
+            accent; the anonymity set is the evidence behind it; the cross-chain
+            route is a design that does not execute yet and is labelled as such.
+
+            It used to be the other way round. The bridge panel is the biggest,
+            most finished-looking thing on the page and it sat directly under
+            the headline, while the one feature that actually moves money was a
+            two-line strip above it. Anyone skimming concluded the opposite of
+            the truth about what works. */}
         <DenominatePanel session={session} />
 
-        <div className="grid-main">
-          <TransferPanel
-            onChange={onChange}
-            session={session}
-            onConnect={() => setPickerOpen(true)}
-          />
-          <PrivacyReport
-            report={report}
-            fromName={byId(tx.fromId).name}
-            toName={byId(tx.toId).name}
-          />
-        </div>
-
         <AnonymityPanel state={anon} />
+
+        <section className="next-up" aria-labelledby="prev-h">
+          <div className="next-up-h">
+            <h2 id="prev-h">Coming next — cross-chain routing</h2>
+            <span className="next-up-tag">not wired yet</span>
+          </div>
+          <p className="next-up-sub">
+            The leak assessment on the right is real and runs on what you pick.
+            The route itself does not execute — bridging in and out is the
+            remaining work.
+          </p>
+
+          {/* Transfer and its report are a pair and belong side by side: the
+              report describes whatever the panel currently proposes. */}
+          <div className="grid-main">
+            <TransferPanel
+              onChange={onChange}
+              session={session}
+              onConnect={() => setPickerOpen(true)}
+            />
+            <PrivacyReport
+              report={report}
+              fromName={byId(tx.fromId).name}
+              toName={byId(tx.toId).name}
+            />
+          </div>
+        </section>
 
         {/* Reference material, deliberately without card chrome. Boxing it at
             the same weight as the app made every region look equally important,
