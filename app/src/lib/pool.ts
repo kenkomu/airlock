@@ -39,6 +39,17 @@ export const TOKENS: Record<string, { symbol: string; decimals: number }> = {
     symbol: 'USDC.e',
     decimals: 6,
   },
+  /* Both found by scanning the mainnet pool's own deposit stream and calling
+     symbol()/decimals() on the addresses that appeared: the pool takes tokens
+     this list did not know about, and 9 of the last 95 deposits were them. */
+  '0x02ab526354a39e7f5d272f327fa94e757df3688188d4a92c6dc3623ab79894e2': {
+    symbol: 'SLAY',
+    decimals: 18,
+  },
+  '0x03fe2b97c1fd336e750087d68b9b867997fd64a2661ff3ca5a7c771641e8e7ac': {
+    symbol: 'WBTC',
+    decimals: 8,
+  },
 };
 
 /* Public endpoints, tried in order. A single provider rate-limits partway
@@ -97,6 +108,10 @@ export interface AnonymitySnapshot {
   uniqueTxs: number;
   /* Deposit count per token symbol, biggest first. */
   byToken: { symbol: string; deposits: number }[];
+  /* Deposits of a token this build does not have a symbol for. They still
+     happened and they are still part of the window, so they are counted and
+     shown rather than dropped — see `tallyEvents`. */
+  unidentified: number;
   /* True when pagination was cut short — the numbers are then a floor, not a
      count, and the UI must say so rather than round it into a claim. */
   truncated: boolean;
@@ -115,6 +130,69 @@ const asBig = (v: string): bigint | null => {
 };
 
 const TOKEN_KEYS = Object.keys(TOKENS).map((a) => [a, BigInt(a)] as const);
+
+export interface Tally {
+  deposits: number;
+  registrations: number;
+  totalEvents: number;
+  txs: Set<string>;
+  perToken: Map<string, number>;
+  /* Deposits whose token matched nothing in TOKENS. */
+  unidentified: number;
+}
+
+export const emptyTally = (): Tally => ({
+  deposits: 0,
+  registrations: 0,
+  totalEvents: 0,
+  txs: new Set(),
+  perToken: new Map(),
+  unidentified: 0,
+});
+
+/* Fold one page of pool events into a running tally.
+ *
+ * Split out from the scan so it can be tested without a network: this is where
+ * the anonymity numbers are actually decided, and it is the one part of the
+ * panel that must not be wrong.
+ *
+ * The `unidentified` counter is the point. The pool accepts any token, and
+ * TOKENS is a hand-maintained list that will always trail it — SLAY and WBTC
+ * were both live in the pool before this list knew them. A deposit whose token
+ * we cannot name still enlarges the window and still belongs to somebody, and
+ * dropping it silently is the specific failure this panel exists to prevent:
+ * a user depositing an unlisted token would see no row for it and therefore no
+ * thin-crowd warning, which is exactly when the warning matters most.
+ */
+export function tallyEvents(events: PoolEvent[], acc: Tally): Tally {
+  for (const ev of events) {
+    acc.totalEvents += 1;
+    acc.txs.add(ev.transaction_hash);
+    const sel = ev.keys?.[0];
+    if (sel && asBig(sel) === asBig(EV_DEPOSIT)) {
+      acc.deposits += 1;
+      /* Deposit carries (user_addr, token, amount); find the token by matching
+         any field against the known set rather than trusting a fixed index,
+         since key/data packing differs by Cairo version. */
+      let named = false;
+      for (const field of [...(ev.keys ?? []), ...(ev.data ?? [])]) {
+        const v = asBig(field);
+        if (v === null) continue;
+        const hit = TOKEN_KEYS.find(([, big]) => big === v);
+        if (hit) {
+          const sym = TOKENS[hit[0]].symbol;
+          acc.perToken.set(sym, (acc.perToken.get(sym) ?? 0) + 1);
+          named = true;
+          break;
+        }
+      }
+      if (!named) acc.unidentified += 1;
+    } else if (sel && asBig(sel) === asBig(EV_VIEWING_KEY_SET)) {
+      acc.registrations += 1;
+    }
+  }
+  return acc;
+}
 
 /* Scan a recent window of pool events.
  *
@@ -135,11 +213,7 @@ export async function scanAnonymitySet(opts?: {
   const headBlock = await getHeadBlock();
   const fromBlock = Math.max(0, headBlock - windowBlocks);
 
-  let deposits = 0;
-  let registrations = 0;
-  let totalEvents = 0;
-  const txs = new Set<string>();
-  const perToken = new Map<string, number>();
+  const acc = emptyTally();
 
   let continuation: string | undefined;
   let pages = 0;
@@ -159,29 +233,7 @@ export async function scanAnonymitySet(opts?: {
       continuation_token?: string;
     }>('starknet_getEvents', [filter]);
 
-    for (const ev of page.events ?? []) {
-      totalEvents += 1;
-      txs.add(ev.transaction_hash);
-      const sel = ev.keys?.[0];
-      if (sel && asBig(sel) === asBig(EV_DEPOSIT)) {
-        deposits += 1;
-        /* Deposit carries (user_addr, token, amount); find the token by matching
-           any field against the known set rather than trusting a fixed index,
-           since key/data packing differs by Cairo version. */
-        for (const field of [...(ev.keys ?? []), ...(ev.data ?? [])]) {
-          const v = asBig(field);
-          if (v === null) continue;
-          const hit = TOKEN_KEYS.find(([, big]) => big === v);
-          if (hit) {
-            const sym = TOKENS[hit[0]].symbol;
-            perToken.set(sym, (perToken.get(sym) ?? 0) + 1);
-            break;
-          }
-        }
-      } else if (sel && asBig(sel) === asBig(EV_VIEWING_KEY_SET)) {
-        registrations += 1;
-      }
-    }
+    tallyEvents(page.events ?? [], acc);
 
     continuation = page.continuation_token;
     pages += 1;
@@ -192,18 +244,19 @@ export async function scanAnonymitySet(opts?: {
     }
   }
 
-  const byToken = [...perToken.entries()]
+  const byToken = [...acc.perToken.entries()]
     .map(([symbol, n]) => ({ symbol, deposits: n }))
     .sort((a, b) => b.deposits - a.deposits);
 
   return {
     fromBlock,
     headBlock,
-    deposits,
-    registrations,
-    totalEvents,
-    uniqueTxs: txs.size,
+    deposits: acc.deposits,
+    registrations: acc.registrations,
+    totalEvents: acc.totalEvents,
+    uniqueTxs: acc.txs.size,
     byToken,
+    unidentified: acc.unidentified,
     truncated,
   };
 }

@@ -55,7 +55,12 @@ function Ready({ snap }: { snap: AnonymitySnapshot }) {
     1,
     Math.round((snap.headBlock - snap.fromBlock) / BLOCKS_PER_DAY),
   );
-  const tokenTotal = snap.byToken.reduce((sum, t) => sum + t.deposits, 0);
+  /* The denominator is every deposit in the window, not just the ones whose
+     token we could name. Dividing by the named subtotal made the rows read
+     74/23/2 against a headline of 95 — three shares that do not reconcile with
+     the number directly above them, each one overstating how big that token's
+     crowd really is. */
+  const tokenTotal = snap.deposits;
 
   return (
     <>
@@ -76,7 +81,7 @@ function Ready({ snap }: { snap: AnonymitySnapshot }) {
           </div>
         </div>
 
-      {snap.byToken.length > 0 && (
+      {(snap.byToken.length > 0 || snap.unidentified > 0) && (
         <div className="tokens">
           <h3 className="sub">Deposits by token</h3>
           <ul className="toklist">
@@ -106,6 +111,27 @@ function Ready({ snap }: { snap: AnonymitySnapshot }) {
                 </li>
               );
             })}
+            {/* The pool takes tokens this build cannot name. Showing them as a
+                row keeps the column adding up to the headline, and keeps us
+                from implying the window is smaller than it is. */}
+            {snap.unidentified > 0 && (
+              <li className="tokrow" key="__other">
+                <TokenMark symbol="?" size={30} />
+                <span className="tokrow-id">
+                  <span className="tokrow-sym">Other</span>
+                  <span className="tokrow-name">
+                    {((snap.unidentified / tokenTotal) * 100).toFixed(0)}% of
+                    deposits
+                  </span>
+                </span>
+                <span className="tokrow-val">
+                  <span className="tokrow-n mono">
+                    {snap.unidentified.toLocaleString()}
+                  </span>
+                  <span className="tokrow-tag">not named here</span>
+                </span>
+              </li>
+            )}
           </ul>
           <p className="muted sm">
             You hide among people who moved <em>the same token</em>. A thin token
