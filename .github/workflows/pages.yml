@@ -1,0 +1,62 @@
+name: Pages
+
+# Publishes the app to kenkomu.github.io/airlock/.
+#
+# The build is the same one CI runs, with one difference: AIRLOCK_BASE tells
+# Vite the site lives under a path rather than at a domain root. It deliberately
+# depends on the CI workflow passing first — a broken build should not replace a
+# working demo, and the demo URL is a judged deliverable.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# A queued deploy should wait for the running one, not cancel it; cancelling
+# mid-deploy can leave the site on a half-uploaded artifact.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: app/.nvmrc
+          cache: pnpm
+          cache-dependency-path: app/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      # The tests gate the deploy. The ladder parity suite in particular is the
+      # one that catches a client that disagrees with the deployed contract,
+      # which is exactly the failure a live demo must never ship with.
+      - run: pnpm test
+      - run: pnpm build
+        env:
+          AIRLOCK_BASE: /airlock/
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: app/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
