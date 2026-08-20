@@ -24,6 +24,7 @@ const WBTC = '0x03fe2b97c1fd336e750087d68b9b867997fd64a2661ff3ca5a7c771641e8e7ac
 const UNLISTED = '0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
 
 const deposit = (token: string, tx = '0xtx'): PoolEvent => ({
+  block_number: 1,
   transaction_hash: tx,
   keys: [EV_DEPOSIT, '0x5812098fb8d760b066b9b1cd48f367076d98e135fcf1173b86f1ff978f76123'],
   data: ['0x64', token],
@@ -75,12 +76,12 @@ describe('tallyEvents', () => {
   it('matches the token wherever it sits in the event', () => {
     /* Key/data packing differs by Cairo version, so the scan searches every
        field rather than trusting an index. */
-    const inKeys: PoolEvent = { transaction_hash: '0x1', keys: [EV_DEPOSIT, STRK], data: ['0x64'] };
+    const inKeys: PoolEvent = { block_number: 1, transaction_hash: '0x1', keys: [EV_DEPOSIT, STRK], data: ['0x64'] };
     expect(tallyEvents([inKeys], emptyTally()).perToken.get('STRK')).toBe(1);
   });
 
   it('counts registrations separately and not as deposits', () => {
-    const reg: PoolEvent = { transaction_hash: '0x1', keys: [EV_VIEWING_KEY_SET], data: [] };
+    const reg: PoolEvent = { block_number: 1, transaction_hash: '0x1', keys: [EV_VIEWING_KEY_SET], data: [] };
     const t = tallyEvents([reg], emptyTally());
     expect(t.registrations).toBe(1);
     expect(t.deposits).toBe(0);
@@ -103,7 +104,7 @@ describe('tallyEvents', () => {
   });
 
   it('ignores an unparseable field rather than throwing', () => {
-    const junk: PoolEvent = { transaction_hash: '0x1', keys: [EV_DEPOSIT], data: ['not-a-felt', STRK] };
+    const junk: PoolEvent = { block_number: 1, transaction_hash: '0x1', keys: [EV_DEPOSIT], data: ['not-a-felt', STRK] };
     expect(() => tallyEvents([junk], emptyTally())).not.toThrow();
     expect(tallyEvents([junk], emptyTally()).perToken.get('STRK')).toBe(1);
   });
