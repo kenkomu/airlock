@@ -30,6 +30,19 @@ export interface Bucketer {
   unit: bigint;
 }
 
+/* A token this deployment can READ a balance for. Deliberately separate from
+   `Bucketer`: what someone holds and what Airlock can route are different
+   questions, and conflating them is how the account panel came to report
+   "Nothing held publicly" on mainnet — where there are no bucketers — for an
+   account holding 24 STRK in the open. It had not looked. For a tool whose
+   entire claim is naming what leaks, stating no public exposure without
+   checking is the worst available direction to be wrong in. */
+export interface TokenRef {
+  address: string;
+  symbol: string;
+  decimals: number;
+}
+
 export interface Network {
   chainId: string;
   name: string;
@@ -41,8 +54,14 @@ export interface Network {
      unavailable here" rather than falling through to a zero address that would
      revert deep inside the pool. */
   bucketers: Bucketer[];
+  /* Tokens worth reading a public balance for on this chain. Not exhaustive —
+     no fixed list can be — so the UI says "of the tokens Airlock knows" rather
+     than implying a full sweep. */
+  tokens: TokenRef[];
   explorer: string;
 }
+
+const STRK = '0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d';
 
 const MAINNET: Network = {
   chainId: SN_MAIN,
@@ -50,6 +69,17 @@ const MAINNET: Network = {
   rpcUrls: ['https://rpc.starknet.lava.build', 'https://starknet-rpc.publicnode.com'],
   pool: '0x040337b1af3c663e86e333bab5a4b28da8d4652a15a69beee2b677776ffe812a',
   bucketers: [],
+  /* The same set the anonymity scan recognises, so the two panels agree about
+     which tokens exist. SLAY and WBTC are here because the pool takes them. */
+  tokens: [
+    { address: STRK, symbol: 'STRK', decimals: 18 },
+    { address: '0x033068f6539f8e6e6b131e6b2b814e6c34a5224bc66947c47dab9dfee93b35fb', symbol: 'USDC', decimals: 6 },
+    { address: '0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7', symbol: 'ETH', decimals: 18 },
+    { address: '0x068f5c6a61780768455de69077e07e89787839bf8166decfbf92b645209c0fb8', symbol: 'USDT', decimals: 6 },
+    { address: '0x053c91253bc9682c04929ca02ed00b3e423f6710d2ee7e0d5ebb06f3ecf368a8', symbol: 'USDC.e', decimals: 6 },
+    { address: '0x02ab526354a39e7f5d272f327fa94e757df3688188d4a92c6dc3623ab79894e2', symbol: 'SLAY', decimals: 18 },
+    { address: '0x03fe2b97c1fd336e750087d68b9b867997fd64a2661ff3ca5a7c771641e8e7ac', symbol: 'WBTC', decimals: 8 },
+  ],
   explorer: 'https://voyager.online',
 };
 
@@ -76,6 +106,10 @@ const SEPOLIA: Network = {
       decimals: 6,
       unit: 1_000_000n,
     },
+  ],
+  tokens: [
+    { address: STRK, symbol: 'STRK', decimals: 18 },
+    { address: '0x0512feac6339ff7889822cb5aa2a86c848e9d392bb0e3e237c008674feed8343', symbol: 'USDC', decimals: 6 },
   ],
   explorer: 'https://sepolia.voyager.online',
 };

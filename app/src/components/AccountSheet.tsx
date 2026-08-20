@@ -35,6 +35,9 @@ export function AccountSheet({
   onDisconnect: () => void;
 }) {
   const [pub, setPub] = useState<ShieldedBalance[] | null>(null);
+  /* Distinct from an empty list. "We looked and found nothing" and "we could
+     not look" are different facts, and only one of them is reassuring. */
+  const [pubFailed, setPubFailed] = useState(false);
   const [copied, setCopied] = useState(false);
 
   /* Public balances are a plain chain read — no wallet, no signature, no cost.
@@ -42,15 +45,28 @@ export function AccountSheet({
      different feature and a slower one. */
   useEffect(() => {
     let cancelled = false;
-    const tokens = conn.network?.bucketers.map((b) => ({
-      token: b.token,
-      symbol: b.symbol,
-      decimals: b.decimals,
+    setPub(null);
+    setPubFailed(false);
+    /* Read the chain's token list, NOT the bucketer list. Deriving it from
+       bucketers meant mainnet — which has none yet — skipped the read entirely
+       and then displayed the empty state, telling someone holding 24 STRK in
+       the open that they held nothing publicly. */
+    const tokens = conn.network?.tokens.map((t) => ({
+      token: t.address,
+      symbol: t.symbol,
+      decimals: t.decimals,
     }));
-    if (!tokens?.length) return setPub([]);
+    if (!tokens?.length) {
+      setPubFailed(true);
+      return setPub([]);
+    }
     publicBalances(conn.provider, conn.address, tokens)
       .then((b) => !cancelled && setPub(b))
-      .catch(() => !cancelled && setPub([]));
+      .catch(() => {
+        if (cancelled) return;
+        setPubFailed(true);
+        setPub([]);
+      });
     return () => {
       cancelled = true;
     };
@@ -120,7 +136,11 @@ export function AccountSheet({
           icon={<IconWallet />}
           rows={pub ?? []}
           loading={pub === null}
-          empty="Nothing held publicly."
+          empty={
+            pubFailed
+              ? 'Could not read your public balance — this is not a claim that you hold nothing.'
+              : 'Nothing held publicly, of the tokens Airlock knows about.'
+          }
         />
 
         {conn.network && (

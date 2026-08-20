@@ -32,6 +32,7 @@ const NET: Network = {
   rpcUrls: ['https://example.invalid'],
   pool: '0x254a6b2997ef52e9f830ce1f543f6b29768295e8d17e2267d672c552cfe0d91',
   bucketers: [BUCKETER],
+  tokens: [{ address: USDC, symbol: 'USDC', decimals: 6 }],
   explorer: 'https://sepolia.voyager.online',
 };
 
