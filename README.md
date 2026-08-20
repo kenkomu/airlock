@@ -4,6 +4,8 @@
 
 Built on the [STRK20](https://strk20-by-example.org/what-is-strk20) privacy pool for the [Private Sprint](https://github.com/starkience/strk20-hackathon) — [RFP-09, cross-chain privacy hub](https://strk20.starknet.io/rfp/cross-chain-privacy-hub).
 
+**[Try it → kenkomu.github.io/airlock](https://kenkomu.github.io/airlock/)** — no install, no wallet needed to look. The anonymity-set panel reads the live mainnet pool the moment the page loads.
+
 > **Status: early.** Sprint runs 14–31 August 2026. This README states the design and the honest privacy claim. See [What works today](#what-works-today) for what is actually running.
 
 ## The idea
@@ -68,14 +70,16 @@ Deliberately one lane, taken all the way to mainnet, rather than four half-finis
 
 ## What works today
 
-This list is the honest answer to "can I use this", and is updated as pieces land. Nothing of our own is deployed yet.
+This list is the honest answer to "can I use this", and is updated as pieces land. The anonymizer is deployed to Sepolia and not yet to mainnet, so the round trip below is rehearsal, not production.
 
+- [x] **Live at [kenkomu.github.io/airlock](https://kenkomu.github.io/airlock/)** — deployed from `main` on every push, gated on the test suite
 - [x] Mainnet — three verified pool transactions, listed in [`strk20.json`](strk20.json)
 - [x] Anonymity-set and timing disclosure — reads the live mainnet pool, no wallet needed
 - [x] Denomination bucketing and exposure assessment
 - [x] Connect a privacy-enabled Starknet wallet (Starknet Wallet API, `WalletAccountV6`)
 - [x] Shielded balance view — `strk20Balances` through the connected wallet
 - [x] **`AirlockBucketer` anonymizer in Cairo** — denomination bucketing, the mitigation StarkWare's threat model defers. 39 snforge tests including full cycles against a pool mock, see [docs/anonymizer.md](docs/anonymizer.md)
+- [x] Anonymizer deployed to **Sepolia** — two bucketers (STRK, USDC), verified live; see [`strk20.json`](strk20.json)
 - [ ] Anonymizer deployed to mainnet
 - [ ] Deterministic Starknet account derived from an EVM signature
 - [ ] Registration with sponsored gas
