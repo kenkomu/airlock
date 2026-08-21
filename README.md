@@ -4,17 +4,28 @@
 
 Built on the [STRK20](https://strk20-by-example.org/what-is-strk20) privacy pool for the [Private Sprint](https://github.com/starkience/strk20-hackathon) — [RFP-09, cross-chain privacy hub](https://strk20.starknet.io/rfp/cross-chain-privacy-hub).
 
-**[Try it → kenkomu.github.io/airlock](https://kenkomu.github.io/airlock/)** — no install, no wallet needed to look. The anonymity-set panel reads the live mainnet pool the moment the page loads.
+**[Try it → kenkomu.github.io/airlock](https://kenkomu.github.io/airlock/)** — no install, and no wallet needed to look. The anonymity panel reads the live mainnet pool the moment the page loads.
 
-> **Status: early.** Sprint runs 14–31 August 2026. This README states the design and the honest privacy claim. See [What works today](#what-works-today) for what is actually running.
+---
 
-## The idea
+## What runs today
 
-> "I have 10 ETH on Arbitrum. I want to send 5 ETH to a fresh address without anyone linking the two."
+The honest answer to "can I use this". Deliberately placed before the design, so nobody has to read a plan to find out what is real.
 
-Most crypto users are not on Starknet, and shouldn't have to be. Airlock lets someone connect the wallet they already have, move value into the STRK20 privacy pool, hold it privately, and withdraw to a **different chain** — without installing a Starknet wallet, holding STRK, or thinking about Starknet at all. Starknet is the engine, not the destination.
+| | |
+|---|---|
+| ✅ | **Live demo**, deployed from `main` on every push and gated on the test suite |
+| ✅ | **`AirlockBucketer` anonymizer in Cairo** — denomination bucketing, the mitigation StarkWare's own threat model defers ([docs/anonymizer.md](docs/anonymizer.md)) |
+| ✅ | **Deployed to Sepolia** — two bucketers, STRK and USDC, both verified against chain |
+| ✅ | **The real pool calls it** — the deployed Sepolia pool runs its real entry point against our deployed contract ([below](#the-pool-really-does-call-it)) |
+| ✅ | Anonymity-set and timing disclosure, read live from the mainnet pool — no wallet required |
+| ✅ | Connect a privacy-enabled Starknet wallet and read a shielded balance (`WalletAccountV6`, `strk20Balances`) |
+| ✅ | Split a shielded balance into standard note sizes, with the split read from the contract rather than computed in the client |
+| ⬜ | Anonymizer deployed to **mainnet** |
+| ⬜ | Bridge in over CCTP, and withdraw to a different chain |
+| ⬜ | Starknet account derived deterministically from an EVM signature; sponsored registration |
 
-The name is the mechanism. You enter, the door seals, a different door opens elsewhere. There is no moment when both doors are open at once.
+**49 Cairo tests** (39 offline, 10 against a forked chain) and **59 TypeScript tests**, run on every push.
 
 ## What is and isn't private
 
@@ -28,86 +39,133 @@ Being precise here matters more than it sounds. Overclaiming is how privacy tool
 
 **Airlock claims one thing: that the deposit side and the withdrawal side are not linkable on-chain.** It does not hide that you used a privacy pool, and it does not hide the amounts at the edges.
 
+Shielding is not private either — *what you do afterwards* is. The auditor holds an escrowed viewing key and can de-anonymize the Starknet side. That is a tradeoff STRK20 makes deliberately, and it is why this is a privacy tool rather than a mixer.
+
 ### The timing caveat, stated plainly
 
 The protocol's own documentation names rapid in-and-out sequences as a real weakness: opening a channel and withdrawing in tight succession can link a recipient to their public activity, and distinctive amounts moved quickly weaken the anonymity set.
 
-So a two-minute round trip is **not** as private as the interface would like to imply. Airlock treats the dwell time between entering and leaving as part of the product rather than as latency: before you withdraw, it shows you the current anonymity set and flags timing and amount patterns that would make your two sides correlatable. A tool that lets you leave immediately while telling you it's private is worse than no tool.
+So a two-minute round trip is **not** as private as the interface would like to imply. Airlock treats the dwell time between entering and leaving as part of the product rather than as latency: before you withdraw, it shows the current anonymity set and flags the timing and amount patterns that would make your two sides correlatable. A tool that lets you leave immediately while telling you it's private is worse than no tool.
+
+The panel is also honest about its own limits. It counts a recent window rather than lifetime totals — a lifetime figure flatters the pool, because what protects you is the crowd sharing your *time window* and your *token*. Deposits of tokens it cannot name are counted and shown as `Other` rather than dropped, so the rows always add up to the headline.
+
+## The problem
+
+> "I have 10 ETH on Arbitrum. I want to send 5 ETH to a fresh address without anyone linking the two."
+
+Most crypto users are not on Starknet, and shouldn't have to be. Airlock lets someone connect the wallet they already have, move value into the STRK20 privacy pool, hold it privately, and withdraw to a **different chain** — without installing a Starknet wallet, holding STRK, or thinking about Starknet at all. Starknet is the engine, not the destination.
+
+The name is the mechanism. You enter, the door seals, a different door opens elsewhere. There is no moment when both doors are open at once.
+
+## How the anonymizer works
+
+A withdrawal that carries your exact amount is self-identifying. Withdraw `847.32 USDC` and anyone watching the pool can match it to the deposit of `847.32 USDC` that went in an hour earlier — the pool hid the link, and the amount handed it straight back.
+
+`AirlockBucketer` splits a withdrawal into standard denominations, so no single note carries a distinctive number. The ladder is `1000 · 500 · 250 · 100 · 50 · 25 · 10 · 5 · 1`, multiplied by a `unit` fixed at deployment.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant W as Wallet
+    participant P as STRK20 pool
+    participant A as AirlockBucketer
+    W->>P: apply_actions([withdraw, open notes ×N, invoke])
+    P->>A: TransferTo — the full amount
+    P->>A: privacy_invoke(amount, note_ids)
+    Note over A: decompose(amount) → legs on the ladder
+    A->>P: approve(pool, amount)
+    A-->>P: one OpenNoteDeposit per leg
+    P->>A: transfer_from — pulls the tokens back
+    Note over P: assert every open note was filled
+```
+
+Three properties make this safe to hand a pool:
+
+- **The amount is declared, never inferred.** Reading `balance_of` would let anyone grief the contract by sending it one unit of dust: the decomposition would shift, the leg count would stop matching the notes the client created, and every transaction would revert until someone cleared the dust. Declaring the amount makes the split a pure function of the call, and a stray balance is inert.
+- **It fails closed.** An amount that is not an exact sum of denominations reverts, rather than silently leaving a remainder somewhere the user cannot see.
+- **Nothing is mutable.** Pool, token and ladder are constructor arguments with no setters, and there is no owner, no admin key and no upgrade path. The account that deploys it holds no privileged position afterwards.
+
+The client never computes the split it displays. It calls `plan(amount)` on the deployed contract and renders the answer, so the interface can never show a decomposition the contract would not produce. A parity suite pins the two together: the Cairo fixture table and the TypeScript one encode the same decomposition, and changing one without the other fails CI.
+
+### The pool really does call it
+
+Every cycle test in this project used to run against a `MockPool` written by reading the pool's source. That is worth a lot, but it shares an author with the contract under test, so it cannot disprove a misreading.
+
+The gap looked unclosable without a wallet: the pool's entry point sits behind a STARK proof no fork can produce. That turned out to be wrong. `Privacy::validate_proof` does not verify a proof — it reads `tx_info.proof_facts`, a transaction-level field the sequencer populates and the contract trusts, and asserts five properties of it. `snforge` can set that field.
+
+So [`src/tests/pool_fork_tests.cairo`](src/tests/pool_fork_tests.cairo) forks Sepolia and has the **deployed pool** run its **real entry point** against the **deployed bucketer**: it transfers 8.4 STRK in, calls `privacy_invoke`, deserializes what comes back as `Span<OpenNoteDeposit>`, pulls the tokens through our approval, and enforces its own open-note accounting. The notes are then read straight out of the pool's storage and checked to hold `5 + 2.5 + 0.5 + 0.1×4`.
+
+Each test was falsified before it was kept — shortening the note list by one fails `LEG_COUNT_MISMATCH`, and a note that nothing fills fails the pool's own `UNDEPOSITED_OPEN_NOTES`.
+
+**What this still does not cover:** the wallet, which is what translates an `STRK20_ACTION[]` into the pool's `Span<ServerAction>`. That translation is assumed here. A real round trip is the only thing that closes it.
 
 ## Design
 
-The protocol constrains this more than it first appears, and the architecture below follows from those constraints rather than from preference.
+The protocol constrains this more than it first appears, and the architecture follows from those constraints rather than from preference.
 
 | Constraint | Consequence |
 |---|---|
 | You cannot register a viewing key on another user's behalf | A Starknet account is derived deterministically from the signature the user gives on their own chain, and registers itself |
 | At most one `InvokeExternal` per pool transaction | The round trip cannot be atomic; it is a resumable multi-transaction job with off-chain orchestration |
 | Deposits are screened on-chain by the protocol | Screening rejection is a first-class user-facing state, not an error toast |
-
-**Flow**
-
-1. **Sign once** on the source chain (MetaMask). The Starknet account key and viewing key are derived from that single signature. Only the read-only viewing key is ever persisted.
-2. **Register** the derived account (`SetViewingKey`), gas sponsored so the user never holds STRK.
-3. **Bridge in** over Circle CCTP; an inbound anonymizer binds the attested cross-chain message to a private note in one transaction.
-4. **Hold.** Anonymity set and correlation risk are surfaced here.
-5. **Withdraw to a different chain** through the outbound anonymizer.
+| One anonymizer serves one token, on one pool, with one ladder | "The bucketer" is a property of a (network, token) pair, never of a network |
 
 **Stack**
 
 | Layer | Choice |
 |---|---|
-| Cross-chain value movement | [`privacy-bridge`](https://github.com/starkware-libs/privacy-bridge) (`bridge-core`, Apache-2.0) over Circle CCTP |
-| Pool actions from the app | [Starknet Wallet API](https://strk20-by-example.org/starknet-wallet-api/overview) via `starknet.js` `WalletAccountV6` — the wallet holds the viewing key and proves; this app never sees either |
-| `PrivacyHub` orchestration | An app-specific [`privacy_invoke`](https://strk20-by-example.org/helpers/privacy-invoke) anonymizer contract in Cairo |
+| Pool actions from the app | [Starknet Wallet API](https://strk20-by-example.org/starknet-wallet-api/overview) via `starknet.js` `WalletAccountV6` — the wallet holds the viewing key and does the proving; this app never sees either |
+| Denomination bucketing | An app-specific [`privacy_invoke`](https://strk20-by-example.org/helpers/privacy-invoke) anonymizer in Cairo |
+| Cross-chain value movement | [`privacy-bridge`](https://github.com/starkware-libs/privacy-bridge) over Circle CCTP — *not yet wired* |
 
 ## Scope
 
 Deliberately one lane, taken all the way to mainnet, rather than four half-finished ones.
 
-**In:** one EVM source chain (Base or Arbitrum), USDC, deposit on chain A → withdraw on chain B, timing and anonymity-set disclosure.
+**In:** the STRK20 pool on Starknet, denomination bucketing, timing and anonymity-set disclosure, and one EVM source chain for the cross-chain leg.
 
-**Out for now:** Solana, arbitrary ERC-20s, StarkGate/LayerSwap/Orbiter wrappers, anything requiring sub-accounts or confidential compute (not shipped).
-
-## What works today
-
-This list is the honest answer to "can I use this", and is updated as pieces land. The anonymizer is deployed to Sepolia and not yet to mainnet, so the round trip below is rehearsal, not production.
-
-- [x] **Live at [kenkomu.github.io/airlock](https://kenkomu.github.io/airlock/)** — deployed from `main` on every push, gated on the test suite
-- [x] Mainnet — three verified pool transactions, listed in [`strk20.json`](strk20.json)
-- [x] Anonymity-set and timing disclosure — reads the live mainnet pool, no wallet needed
-- [x] Denomination bucketing and exposure assessment
-- [x] Connect a privacy-enabled Starknet wallet (Starknet Wallet API, `WalletAccountV6`)
-- [x] Shielded balance view — `strk20Balances` through the connected wallet
-- [x] **`AirlockBucketer` anonymizer in Cairo** — denomination bucketing, the mitigation StarkWare's threat model defers. 39 snforge tests including full cycles against a pool mock, see [docs/anonymizer.md](docs/anonymizer.md)
-- [x] Anonymizer deployed to **Sepolia** — two bucketers (STRK, USDC), verified live; see [`strk20.json`](strk20.json)
-- [ ] Anonymizer deployed to mainnet
-- [ ] Deterministic Starknet account derived from an EVM signature
-- [ ] Registration with sponsored gas
-- [ ] Bridge in: CCTP → private note
-- [ ] Withdraw to a different chain
+**Out for now:** Solana, arbitrary ERC-20s, StarkGate/LayerSwap/Orbiter wrappers, and anything requiring sub-accounts or confidential compute.
 
 ## Running locally
 
-```bash
-npm install
-npm run dev
-```
-
-Requires a privacy-enabled Starknet wallet (Ready). **Pin the versions** — STRK20 support landed in `starknet` 10.4.0 and ships on the npm `next` tag; a bare install resolves to 10.0.x, which contains none of the STRK20 API.
+The app is a Vite + React client with no backend. Node is pinned by [`app/.nvmrc`](app/.nvmrc) and dependencies by the lockfile — install from the lockfile rather than by name, since STRK20 support landed in `starknet` 10.4.0 and a loose resolve gets you a version with none of the API.
 
 ```bash
-npm install starknet@^10.4.0
-npm install @starknet-io/get-starknet-discovery@6.0.2 @starknet-io/get-starknet-wallet-standard@6.0.2
+nvm use                          # 20.19.0, from app/.nvmrc
+cd app
+pnpm install --frozen-lockfile
+pnpm dev
 ```
 
-## Network
+To actually use it you need a privacy-enabled Starknet wallet — [Ready](https://www.ready.co/) **5.33.8 or newer**. The app probes for STRK20 support when you connect and names the version it found, rather than failing silently.
+
+The contracts need [Scarb](https://docs.swmansion.com/scarb/) 2.19.1 and [Starknet Foundry](https://foundry-rs.github.io/starknet-foundry/) 0.62.1:
+
+```bash
+snforge test --skip fork_tests   # 39 offline tests, no network
+snforge test fork_tests          # 10 tests against a pinned Sepolia fork
+```
+
+Fork tests are excluded from CI on purpose: they need network access and a public RPC, neither of which belongs in a pipeline whose job is to say whether the code is correct.
+
+## Deployments
 
 | | |
 |---|---|
-| Mainnet pool | [`0x040337b1af3c663e86e333bab5a4b28da8d4652a15a69beee2b677776ffe812a`](https://voyager.online/contract/0x040337b1af3c663e86e333bab5a4b28da8d4652a15a69beee2b677776ffe812a) |
-| Sepolia pool | `0x0254a6b2997ef52e9f830ce1f543f6b29768295e8d17e2267d672c552cfe0d91` |
+| Mainnet pool | [`0x040337b1…812a`](https://voyager.online/contract/0x040337b1af3c663e86e333bab5a4b28da8d4652a15a69beee2b677776ffe812a) |
+| Sepolia pool | [`0x0254a6b2…0d91`](https://sepolia.voyager.online/contract/0x254a6b2997ef52e9f830ce1f543f6b29768295e8d17e2267d672c552cfe0d91) |
+| Bucketer — Sepolia STRK, 0.1 rungs | [`0x00de39f7…0e6b`](https://sepolia.voyager.online/contract/0x00de39f79e7e8b0dcdafe955330e206990203d6047a22e853eab9df83c440e6b) |
+| Bucketer — Sepolia USDC, 1.0 rungs | [`0x004c368a…b1fb`](https://sepolia.voyager.online/contract/0x004c368ae058ee81b61884c5c47ee57484c4348669b66ac606366bbd1fd1b1fb) |
+| Bucketer — mainnet | not yet deployed |
 
-Deployed contract addresses will be listed here and in `strk20.json` as they land.
+Addresses are also machine-readable in [`strk20.json`](strk20.json). Deploying is scripted, with a preflight that re-checks both constructor addresses are live contracts before anything is spent — see [docs/deploy.md](docs/deploy.md).
+
+## Documentation
+
+- [docs/anonymizer.md](docs/anonymizer.md) — the contract, its ladder, and the threat it addresses
+- [docs/deploy.md](docs/deploy.md) — deploying a bucketer, and the preflight
+- [docs/mainnet.md](docs/mainnet.md) — mainnet addresses and how they were verified
+- [docs/setup.md](docs/setup.md) — toolchain versions and why each is pinned
 
 ## References
 
