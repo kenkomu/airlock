@@ -70,8 +70,10 @@ pulls back inside one atomic call.
 ## Testing
 
 ```sh
-scarb build && snforge test     # 39 tests
-cd app && pnpm test             # 21 tests, including the parity table
+scarb build
+snforge test --skip fork_tests  # 39 offline tests, no network
+snforge test fork_tests         # 10 tests against a pinned Sepolia fork
+cd app && pnpm test             # 59 tests, including the parity table
 ```
 
 | Suite | Covers |
@@ -79,6 +81,8 @@ cd app && pnpm test             # 21 tests, including the parity table
 | `ladder_tests` (10) | Decomposition, exhaustively for every bucketable amount from 1 to 400; the shared fixture table for 6- and 18-decimal tokens; greedy minimality; descending order; and the four fail-closed cases |
 | `bucketer_tests` (18) | Access control, exact approval, note ordering, the donation griefing vector, constructor guards, the event, and the read-only views |
 | `integration_tests` (11) | Full cycles against `MockPool`, which replicates the real pool's assertions constant for constant |
+| `fork_tests` (7) | The deployed contract on a Sepolia fork, against the real STRK token |
+| `pool_fork_tests` (3) | The **real deployed pool** calling the **real deployed contract** |
 
 The integration suite is the one that answers *"will this work on chain"*. The
 unit tests prove the contract does what was intended; these prove the intention
@@ -113,6 +117,7 @@ invisible to it. The web app lives in `app/`.
 | `bucketer_tests` | 18 | Access control, exact approval, note ordering, constructor guards |
 | `integration_tests` | 11 | Full cycles against `MockPool`, which replicates the pool's asserts |
 | `fork_tests` | 7 | The **deployed** contract on a Sepolia fork, against the **real** STRK token |
+| `pool_fork_tests` | 3 | The **real deployed pool** running its real entry point against this contract |
 
 The fork tests exist because `MockPool` and `MockErc20` share an author with the
 contract. They are worth a great deal, but they cannot disprove a misreading: if
@@ -124,12 +129,38 @@ They are pinned to a block, so a run today and a run next week assert the same
 thing, and they are excluded from CI (`--skip fork_tests`) because a pipeline
 that goes red when a public node is slow teaches people to ignore red.
 
+### The pool does call this contract
+
+This section used to say the opposite — that the pool could never call us on a
+fork, because `apply_actions` sits behind a proven entry point no fork can
+satisfy. That was a misreading, and worth recording as one.
+
+`Privacy::validate_proof` does not verify a proof. It reads
+`tx_info.proof_facts` — a transaction-level field the sequencer populates and
+the contract trusts — and asserts five properties of it: the program variant,
+the output version, that the base block is recent, and that the L1 message hash
+equals `compute_message_hash(actions, pool)`. The cryptography happens outside
+the contract. `snforge` can set that field, so the entry point is reachable.
+
+`pool_fork_tests.cairo` therefore runs the real thing: the deployed pool
+transfers 8.4 STRK to the deployed bucketer, calls `privacy_invoke`,
+deserialises the returned span, pulls the tokens back through our approval, and
+enforces its own open-note accounting. The notes are then read out of the pool's
+storage and checked to hold 5 + 2.5 + 0.5 + 0.1x4.
+
+Each test was falsified before being kept: one fewer note fails
+`LEG_COUNT_MISMATCH`, and a note nothing fills fails the pool's own
+`UNDEPOSITED_OPEN_NOTES` — the exact invariant `MockPool` was imitating.
+
+Two things only running it could teach. The pool charges a flat 2 STRK per call,
+taken by `transfer_from` against the caller, so the caller must approve first.
+And `EmitOpenNoteCreated` cannot be constructed from outside the pool's crate —
+it embeds a `pub(crate)` type — so it is built from its wire format, which is
+closer to what a wallet actually sends anyway.
+
 ### What is still not covered
 
-**The pool has never called this contract.** `_apply_actions` runs behind a
-proven entry point that needs a STARK proof from the proving service, which a
-fork cannot produce. So the pool's own accounting — the open-note counter and
-`UNDEPOSITED_OPEN_NOTES` — rests on `MockPool` alone.
-
-One round trip through a wallet closes that, and nothing above should be read as
+**The wallet.** It is the wallet that turns an `STRK20_ACTION[]` into the pool's
+`Span<ServerAction>`, and that translation is assumed rather than tested. One
+round trip through a real wallet closes it, and nothing above should be read as
 having closed it already.
