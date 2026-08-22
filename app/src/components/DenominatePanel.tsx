@@ -11,7 +11,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { fetchPlan } from '../lib/actions';
 import { denominate, format, type Stage } from '../lib/denominate';
-import { bucketerFor, contractUrl, txUrl, type Bucketer, type Network } from '../lib/networks';
+import { SN_MAIN, bucketerFor, contractUrl, txUrl, type Bucketer, type Network } from '../lib/networks';
 import type { WalletSession } from '../hooks/useWallet';
 import { IconLock } from './Icons';
 
@@ -49,7 +49,24 @@ export function DenominatePanel({ session }: { session: WalletSession }) {
     );
   }, [network, session.balances]);
 
+  /* What this account actually holds shielded in the selected token. Without
+     it, the only way to learn whether you can afford the amount you are typing
+     was to close the panel and open the account sheet. */
+  const held = bucketer
+    ? session.balances.find((b) => BigInt(b.token) === BigInt(bucketer.token))
+    : undefined;
+  const balance = held?.amount ?? null;
+
+  /* The largest amount that will actually split, which is not the balance. The
+     contract fails closed on anything that is not an exact sum of rungs, so a
+     "max" that pasted in the raw balance would hand back NOT_ON_LADDER most of
+     the time. Flooring to the unit always lands on the ladder, because the unit
+     is itself the smallest rung. */
+  const maxSplittable =
+    balance !== null && bucketer ? (balance / bucketer.unit) * bucketer.unit : null;
+
   const amount = bucketer ? toBaseUnits(text, bucketer.decimals) : null;
+  const overBalance = amount !== null && balance !== null && amount > balance;
 
   /* Ask the contract how it would split this, as the user types. Read-only and
      unsigned, so there is no reason to make them commit first to find out. */
@@ -142,7 +159,14 @@ export function DenominatePanel({ session }: { session: WalletSession }) {
     <section className="card card-action card-hero" aria-labelledby="den-h">
       <header className="card-h">
         <h2 id="den-h">Denominate</h2>
-        <span className="card-h-note">{network.name}</span>
+        {/* "Starknet" is what the chain is called, not a warning. On mainnet the
+            next button spends real funds, and the header is the last place
+            that fact can be stated before someone presses it. */}
+        {network.chainId === SN_MAIN ? (
+          <span className="card-h-note note-live">Mainnet · real funds</span>
+        ) : (
+          <span className="card-h-note">{network.name} · test funds</span>
+        )}
       </header>
 
       {network.bucketers.length > 1 && (
@@ -161,7 +185,35 @@ export function DenominatePanel({ session }: { session: WalletSession }) {
       )}
 
       <label className="field">
-        <span className="field-l">Amount to split</span>
+        <span className="field-row">
+          <span className="field-l">Amount to split</span>
+          {balance !== null && (
+            <span className="field-bal">
+              {balance > 0n ? (
+                <>
+                  <span className="muted">Private balance</span>{' '}
+                  <span className="mono">{format(balance, bucketer)}</span>
+                  {maxSplittable !== null && maxSplittable > 0n && (
+                    <button
+                      type="button"
+                      className="linkbtn"
+                      disabled={busy}
+                      onClick={() =>
+                        setText(format(maxSplittable, bucketer).replace(` ${bucketer.symbol}`, ''))
+                      }
+                    >
+                      use max
+                    </button>
+                  )}
+                </>
+              ) : (
+                <span className="muted">
+                  Nothing shielded in {bucketer.symbol} — shield some in your wallet first
+                </span>
+              )}
+            </span>
+          )}
+        </span>
         <input
           className="input mono"
           inputMode="decimal"
@@ -178,7 +230,14 @@ export function DenominatePanel({ session }: { session: WalletSession }) {
           .join(' · ')} {bucketer.symbol}
       </p>
 
-      {planError && <p className="err">{planError}</p>}
+      {overBalance && (
+        <p className="err">
+          That is more than you hold shielded. The pool would reject it, so this
+          says so now rather than after you approve it.
+        </p>
+      )}
+
+      {!overBalance && planError && <p className="err">{planError}</p>}
 
       {legs && (
         <div className="split">
@@ -203,14 +262,26 @@ export function DenominatePanel({ session }: { session: WalletSession }) {
       <button
         className="btn btn-primary btn-lg"
         onClick={run}
-        disabled={busy || !legs}
+        disabled={busy || !legs || overBalance}
       >
         <IconLock /> {busy ? 'Working…' : `Split into ${legs?.length ?? 0} notes`}
       </button>
 
+      {/* Worth explaining rather than just printing. For a moment inside this
+          transaction the pool hands the whole withdrawal to this contract before
+          any of it comes back as notes, so "which contract" is a fair question
+          and the answer should be checkable before signing, not after. */}
       <p className="muted sm">
-        Anonymizer <a className="d-link mono" href={contractUrl(network, bucketer.address)} target="_blank" rel="noreferrer">
-          {bucketer.address.slice(0, 10)}…{bucketer.address.slice(-4)}
+        Your withdrawal passes through this contract, which splits it and hands
+        every part straight back to the pool in the same transaction. It has no
+        owner and cannot be upgraded —{' '}
+        <a
+          className="d-link mono"
+          href={contractUrl(network, bucketer.address)}
+          target="_blank"
+          rel="noreferrer"
+        >
+          read it on {network.explorer.replace(/^https:\/\//, '')} ↗
         </a>
       </p>
     </section>

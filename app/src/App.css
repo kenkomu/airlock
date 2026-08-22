@@ -1857,3 +1857,48 @@ main > .card {
     background: var(--surface-3);
   }
 }
+
+/* ---------- amount field: the balance beside the label ----------
+   The number that decides what you can type belongs next to where you type it.
+   Before this it lived in the account sheet, so answering "can I afford this"
+   meant leaving the form. */
+.field-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s3);
+  flex-wrap: wrap;
+}
+.field-bal {
+  font-size: 0.82rem;
+  color: var(--text-2);
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--s2);
+}
+/* A button that reads as a link, because it fills a field rather than
+   navigating — but it must still look pressable, and still take a focus ring. */
+.linkbtn {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  font-size: 0.78rem;
+  color: var(--accent);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.linkbtn:hover:not(:disabled) { color: var(--text); }
+.linkbtn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* Mainnet means real money, so it is the one network label that is not quiet.
+   Signal orange rather than the accent: the accent means "this is the live
+   path", which is exactly the thing not worth distinguishing here. */
+.note-live {
+  color: var(--leak);
+  background: var(--leak-wash);
+  border: 1px solid color-mix(in srgb, var(--leak) 35%, transparent);
+  border-radius: var(--r-sm);
+  padding: 2px 8px;
+}
