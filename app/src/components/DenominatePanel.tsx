@@ -13,6 +13,21 @@ import { fetchPlan } from '../lib/actions';
 import { denominate, format, type Stage } from '../lib/denominate';
 import { SN_MAIN, bucketerFor, contractUrl, txUrl, type Bucketer, type Network } from '../lib/networks';
 import { recordSplit } from '../lib/history';
+
+/* Measured, not estimated. On the first mainnet split
+   (0x03f52e1bddd716344f5dd3c43ba2b81eb1aefb0bc7791aba3e54051b40963a50) the
+   wallet's relayer took 6 STRK out of the shielded balance while the network
+   fee paid to the sequencer was 3.4698 STRK. The premium is the price of not
+   appearing as the payer.
+
+   It is stated as an observation with its transaction attached rather than as a
+   prediction, because the figure belongs to the wallet's relayer and nothing in
+   the STRK20 wallet API exposes it — `strk20PrepareInvoke` returns
+   `{ call, proof }` and no fee. Quoting a number we cannot compute as though we
+   could would be the same overclaiming this app exists to avoid. */
+const OBSERVED_SPONSOR_FEE = '6 STRK';
+const OBSERVED_NETWORK_FEE = '3.47 STRK';
+const OBSERVED_TX = '0x03f52e1bddd716344f5dd3c43ba2b81eb1aefb0bc7791aba3e54051b40963a50';
 import type { WalletSession } from '../hooks/useWallet';
 import { IconLock } from './Icons';
 
@@ -272,6 +287,26 @@ export function DenominatePanel({ session }: { session: WalletSession }) {
             Each note can be spent in its own transaction later. That is the point — the
             same amounts sent together in one transaction would be linked by it.
           </p>
+        </div>
+      )}
+
+      {/* The bill, named in the same voice as the leaks. Everything else in this
+          panel tells you what a privacy step costs your anonymity; this tells
+          you what it costs your balance, and it was invisible until someone
+          watched 6 STRK leave after splitting 8.4. */}
+      {legs && (
+        <div className="notice notice-leak" role="note">
+          <strong>Gas comes out of your private balance, on top of the amount above.</strong>{' '}
+          Your wallet pays through a relayer so your public address never appears
+          as the payer, and bills the shielded side for it. On our first mainnet
+          split that was <span className="mono">{OBSERVED_SPONSOR_FEE}</span>{' '}
+          against a <span className="mono">{OBSERVED_NETWORK_FEE}</span> network
+          fee —{' '}
+          <a className="d-link" href={txUrl(network, OBSERVED_TX)} target="_blank" rel="noreferrer">
+            check it
+          </a>
+          . The premium buys the anonymity. Yours may differ; your wallet shows
+          the exact figure before you sign.
         </div>
       )}
 
