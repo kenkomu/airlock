@@ -8,10 +8,11 @@
  * prediction of it.
  */
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { fetchPlan } from '../lib/actions';
 import { denominate, format, type Stage } from '../lib/denominate';
-import { SN_MAIN, bucketerFor, contractUrl, txUrl, type Bucketer, type Network } from '../lib/networks';
+import { NETWORKS, SN_MAIN, bucketerFor, contractUrl, txUrl, type Bucketer, type Network } from '../lib/networks';
+import { providerFor } from '../lib/wallet';
 import { recordSplit } from '../lib/history';
 
 /* Measured, not estimated. On the first mainnet split
@@ -42,12 +43,36 @@ function toBaseUnits(text: string, decimals: number): bigint | null {
   return BigInt(whole || '0') * 10n ** BigInt(decimals) + BigInt(frac.padEnd(decimals, '0') || '0');
 }
 
-export function DenominatePanel({ session }: { session: WalletSession }) {
+/* `plan` is a view function. It needs a provider and nothing else — no wallet,
+   no signature, no account. So the whole preview runs before anyone connects,
+   against the real mainnet contract.
+
+   That is the difference between explaining this product and showing it. A
+   newcomer types a number and watches it break apart; someone evaluating the
+   project sees a live mainnet call in the first ten seconds. Neither has to
+   install anything to get there. */
+const MAINNET = NETWORKS.find((n) => n.chainId === SN_MAIN)!;
+
+export function DenominatePanel({
+  session,
+  onConnect,
+}: {
+  session: WalletSession;
+  onConnect: () => void;
+}) {
   const conn = session.state.phase === 'connected' ? session.state.conn : null;
-  const network = conn?.network;
+  /* Fall back to mainnet so the panel is usable unconnected. */
+  const network = conn?.network ?? MAINNET;
+  const preview = conn === null;
 
   const [bucketer, setBucketer] = useState<Bucketer | null>(null);
-  const [text, setText] = useState('');
+  /* Preview opens with a worked example already in the field. An empty input
+     asks a newcomer to guess a number before they know what the thing does,
+     and it makes the panel look inert to anyone skimming — the split is the
+     product, so it should be on screen without being asked for. */
+  const [text, setText] = useState(() =>
+    session.state.phase === 'connected' ? '' : '8.4',
+  );
   const [legs, setLegs] = useState<bigint[] | null>(null);
   const [planError, setPlanError] = useState<string | null>(null);
   const [stage, setStage] = useState<Stage>({ at: 'idle' });
@@ -87,7 +112,7 @@ export function DenominatePanel({ session }: { session: WalletSession }) {
   /* Ask the contract how it would split this, as the user types. Read-only and
      unsigned, so there is no reason to make them commit first to find out. */
   useEffect(() => {
-    if (!conn || !bucketer || amount === null || amount <= 0n) {
+    if (!bucketer || amount === null || amount <= 0n) {
       setLegs(null);
       setPlanError(null);
       return;
@@ -95,7 +120,7 @@ export function DenominatePanel({ session }: { session: WalletSession }) {
     let cancelled = false;
     const t = setTimeout(async () => {
       try {
-        const l = await fetchPlan(conn.provider, bucketer.address, amount);
+        const l = await fetchPlan(conn?.provider ?? providerFor(network), bucketer.address, amount);
         if (!cancelled) { setLegs(l); setPlanError(null); }
       } catch {
         if (!cancelled) {
@@ -105,7 +130,19 @@ export function DenominatePanel({ session }: { session: WalletSession }) {
       }
     }, 250);
     return () => { cancelled = true; clearTimeout(t); };
-  }, [conn, bucketer, amount]);
+  }, [conn, network, bucketer, amount]);
+
+  /* The example must not survive into the connected state: it is illustrative,
+     and someone arriving at a filled field could sign an amount they never
+     typed. */
+  const wasPreview = useRef(conn === null);
+  useEffect(() => {
+    if (wasPreview.current && conn !== null) {
+      setText('');
+      setLegs(null);
+      wasPreview.current = false;
+    }
+  }, [conn]);
 
   const run = useCallback(async () => {
     if (!conn || !conn.network || !bucketer || amount === null) return;
@@ -144,27 +181,10 @@ export function DenominatePanel({ session }: { session: WalletSession }) {
     }
   }, [conn, bucketer, amount, session]);
 
-  if (!conn) {
+  if (conn && !conn.network) {
     return (
       <section className="card card-action card-hero" aria-labelledby="den-h">
-        <header className="card-h">
-          <h2 id="den-h">Denominate</h2>
-          <span className="card-h-note">live on Sepolia</span>
-        </header>
-        <p className="muted">
-          Split a shielded balance into standard note sizes, so no single
-          withdrawal carries an amount anyone can pick out. The split is read
-          from the deployed contract, not computed here.
-        </p>
-        <p className="muted sm">Connect a wallet to begin.</p>
-      </section>
-    );
-  }
-
-  if (!network) {
-    return (
-      <section className="card card-action card-hero" aria-labelledby="den-h">
-        <header className="card-h"><h2 id="den-h">Denominate</h2></header>
+        <header className="card-h"><h2 id="den-h">Split your withdrawal</h2></header>
         <p className="err">
           Airlock has no addresses for chain <span className="mono">{conn.chainId}</span>. Switch to
           Starknet mainnet or Sepolia.
@@ -191,16 +211,33 @@ export function DenominatePanel({ session }: { session: WalletSession }) {
   return (
     <section className="card card-action card-hero" aria-labelledby="den-h">
       <header className="card-h">
-        <h2 id="den-h">Denominate</h2>
+        <h2 id="den-h">Split your withdrawal</h2>
         {/* "Starknet" is what the chain is called, not a warning. On mainnet the
-            next button spends real funds, and the header is the last place
-            that fact can be stated before someone presses it. */}
-        {network.chainId === SN_MAIN ? (
+            next button spends real funds, and the header is the last place that
+            fact can be stated before someone presses it.
+
+            In preview there are no funds to spend, so saying "real funds" would
+            be a false alarm — it says where the numbers come from instead. */}
+        {preview ? (
+          <span className="card-h-note">Live from mainnet · nothing to sign</span>
+        ) : network.chainId === SN_MAIN ? (
           <span className="card-h-note note-live">Mainnet · real funds</span>
         ) : (
           <span className="card-h-note">{network.name} · test funds</span>
         )}
       </header>
+
+      {/* The idea before the mechanism. Someone who has never heard of STRK20
+          needs to know what problem this solves before a word like
+          "denomination" can mean anything to them. */}
+      {preview && (
+        <p className="lede-in">
+          Withdrawing <strong>8.4</strong> tells everyone watching it was you —
+          nobody else moved that exact number. Split it into standard amounts and
+          each piece looks like everybody else's. <strong>Try it below</strong>;
+          the answer comes from the contract on mainnet, and nothing is signed.
+        </p>
+      )}
 
       {network.bucketers.length > 1 && (
         <div className="seg" role="group" aria-label="Token">
@@ -294,7 +331,7 @@ export function DenominatePanel({ session }: { session: WalletSession }) {
           panel tells you what a privacy step costs your anonymity; this tells
           you what it costs your balance, and it was invisible until someone
           watched 6 STRK leave after splitting 8.4. */}
-      {legs && (
+      {legs && !preview && (
         <div className="notice notice-leak" role="note">
           <strong>Gas comes out of your private balance, on top of the amount above.</strong>{' '}
           Your wallet pays through a relayer so your public address never appears
@@ -312,13 +349,19 @@ export function DenominatePanel({ session }: { session: WalletSession }) {
 
       <StageLine stage={stage} network={network} bucketer={bucketer} />
 
-      <button
-        className="btn btn-primary btn-lg"
-        onClick={run}
-        disabled={busy || !legs || overBalance}
-      >
-        <IconLock /> {busy ? 'Working…' : `Split into ${legs?.length ?? 0} notes`}
-      </button>
+      {preview ? (
+        <button className="btn btn-primary btn-lg" onClick={onConnect} type="button">
+          <IconLock /> Connect a wallet to do this for real
+        </button>
+      ) : (
+        <button
+          className="btn btn-primary btn-lg"
+          onClick={run}
+          disabled={busy || !legs || overBalance}
+        >
+          <IconLock /> {busy ? 'Working…' : `Split into ${legs?.length ?? 0} notes`}
+        </button>
+      )}
 
       {/* Worth explaining rather than just printing. For a moment inside this
           transaction the pool hands the whole withdrawal to this contract before

@@ -2364,3 +2364,26 @@ body {
   background: var(--bg);
   color: var(--text);
 }
+
+/* The plain-language opener inside the action card. Slightly larger than body
+   copy because it is the first thing anyone reads that is not a claim, and it
+   has to carry someone who has never heard of any of this. */
+.lede-in {
+  font-size: 0.98rem;
+  color: var(--text-2);
+  margin: 0 0 var(--s3);
+  max-width: 62ch;
+}
+.lede-in strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* Four links rather than one. Wraps on narrow screens like everything else in
+   a row that can grow. */
+.foot-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2) var(--s4);
+  align-items: center;
+}

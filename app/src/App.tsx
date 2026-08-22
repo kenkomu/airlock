@@ -86,7 +86,7 @@ export default function App() {
             two-line strip above it. Anyone skimming concluded the opposite of
             the truth about what works. */}
         <Boundary name="Denominate">
-          <DenominatePanel session={session} />
+          <DenominatePanel session={session} onConnect={() => setPickerOpen(true)} />
         </Boundary>
 
         <Boundary name="Anonymity set">
@@ -171,17 +171,37 @@ export default function App() {
         </section>
       </main>
 
+      {/* The page had exactly one link, and it pointed at StarkWare. Anyone
+          evaluating this — or simply wanting to check a claim — had no route to
+          the code, the deployed contract, or the transaction that proves it
+          runs. Those are the three things worth linking, so they are here. */}
       <footer className="bottom">
-        <span>
-          Airlock · built on the{' '}
+        <nav className="foot-links" aria-label="Project links">
+          <a href="https://github.com/kenkomu/airlock" target="_blank" rel="noreferrer">
+            Source
+          </a>
+          <a
+            href="https://voyager.online/contract/0x036816fe3c38b222e737ec4168b604309ab24154862d1a3f4c9db0042a90e97a"
+            target="_blank"
+            rel="noreferrer"
+          >
+            Anonymizer on mainnet
+          </a>
+          <a
+            href="https://voyager.online/tx/0x03f52e1bddd716344f5dd3c43ba2b81eb1aefb0bc7791aba3e54051b40963a50"
+            target="_blank"
+            rel="noreferrer"
+          >
+            A real split, on mainnet
+          </a>
           <a
             href="https://github.com/starkware-libs/starknet-privacy"
             target="_blank"
             rel="noreferrer"
           >
-            STRK20 privacy pool
+            STRK20 pool
           </a>
-        </span>
+        </nav>
         <span className="mono muted">pool 0x040337b1…812a</span>
       </footer>
     </div>
