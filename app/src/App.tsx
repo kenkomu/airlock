@@ -13,6 +13,7 @@ import { DenominatePanel } from './components/DenominatePanel';
 import { ConnectWallet, WalletNotice, NetworkBadge } from './components/ConnectWallet';
 import { useWallet } from './hooks/useWallet';
 import { Boundary } from './components/Boundary';
+import { ThemeToggle } from './components/ThemeToggle';
 
 const INITIAL: TransferState = {
   fromId: 137,
@@ -53,6 +54,7 @@ export default function App() {
           <span className="brand-name">AIRLOCK</span>
         </div>
         <div className="top-right">
+          <ThemeToggle />
           <NetworkBadge session={session} />
           <ConnectWallet session={session} open={pickerOpen} setOpen={setPickerOpen} />
         </div>

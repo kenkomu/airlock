@@ -29,12 +29,37 @@
 
   --text: #e6edf3;
   --text-2: #9aaab8;
-  --text-3: #6b7c8c;
+  /* 4.94:1 against the deepest surface this sits on. It was #6b7c8c, which is
+     3.00:1 — under AA, and it had been that way since the first commit. Adding
+     light mode is what surfaced it, because measuring one theme meant measuring
+     both. */
+  --text-3: #94a2b0;
 
   /* Instrument cyan. Cold, technical, and distinct from every semantic state. */
   --accent: #26b6cf;
   --accent-dim: #1a8298;
   --accent-wash: #0f2b32;
+  --accent-hi: #35c6de;
+  /* Filled surfaces, kept separate from `--accent`. The two have opposite
+     needs in light mode: text has to be dark enough to read ON the page, and a
+     fill has to be bright enough for the dark ink to read on IT. One token
+     serving both meant the selected segment came out 2.90:1. */
+  --accent-fill: #26b6cf;
+  --accent-grad-a: #2ec3dc;
+  --accent-grad-b: #1a8298;
+  --accent-grad-a-hi: #46d2e9;
+  --accent-grad-b-hi: #2196ad;
+  --accent-glow: rgba(38, 182, 207, 0.75);
+
+  --surface-4: #27333f;
+  --border-hi: #2d3c4c;
+
+  /* Ink on a filled semantic colour. These do NOT flip with the theme: the
+     fills stay saturated in both, so the readable ink on them stays dark. */
+  --on-accent: #04191d;
+  --on-sealed: #062012;
+  --on-leak: #211803;
+  --on-blocked: #2b0d0a;
 
   /* Semantic — meaning, not decoration. */
   --sealed: #46b978;
@@ -64,6 +89,96 @@
 
   /* 150–300ms per the interaction rules. */
   --t: 180ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ---------- light ----------
+ * Dark is Airlock's identity and stays the base, so a viewer with no stated
+ * preference gets the instrument surface the app was designed as. Light is a
+ * real second palette rather than an inversion: the neutrals keep the same cool
+ * blue bias, and every semantic colour is re-picked for contrast on a pale
+ * ground rather than reused from the dark set, where amber and cyan both fail.
+ *
+ * Three states, not two. An explicit choice stamps data-theme on <html>; the
+ * default "system" setting stamps nothing, and only prefers-color-scheme
+ * separates the two. So the media query is guarded against an explicit dark
+ * choice, and [data-theme="light"] repeats the palette so the toggle wins on a
+ * dark OS as well. */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme='dark']) {
+    --bg: #f4f7f9;
+    --surface: #ffffff;
+    --surface-2: #eef3f7;
+    --surface-3: #e4ebf1;
+    --surface-4: #dbe4ec;
+
+    --border: #d3dde5;
+    --border-soft: #e4ebf1;
+    --border-hi: #bccbd8;
+
+    --text: #16202b;
+    --text-2: #4d5c6a;
+    --text-3: #556370; /* 4.79:1 on the palest surface */
+
+    /* The cyan darkens for text and hairlines; the FILL stays bright so the
+       primary button keeps its identity and its dark ink stays readable. */
+    --accent: #0a6a7c; /* 4.85:1 as text; the gradient below stays bright */
+    --accent-dim: #57a9b8;
+    --accent-wash: #e2f1f4;
+    --accent-hi: #0a6a7c;
+  --accent-fill: #2ab3cc; /* 7.25:1 with --on-accent */
+    --accent-fill: #2ab3cc; /* 7.25:1 with --on-accent */
+    --accent-grad-a: #2ab3cc;
+    --accent-grad-b: #0d7d92;
+    --accent-grad-a-hi: #21a3bb;
+    --accent-grad-b-hi: #0a6a7c;
+    --accent-glow: rgba(13, 125, 146, 0.28);
+
+    /* Re-picked, not reused. Dark-mode amber on white is roughly 2:1. */
+    --sealed: #2f7d52;
+    --sealed-wash: #e3f2e9;
+    --leak: #8a5d0c;
+    --leak-wash: #fbf0da;
+    --blocked: #b23a2e;
+    --blocked-wash: #fbe6e3;
+
+    --shadow: 0 1px 2px rgba(22, 32, 43, 0.06), 0 8px 24px rgba(22, 32, 43, 0.08);
+  }
+}
+
+:root[data-theme='light'] {
+  --bg: #f4f7f9;
+  --surface: #ffffff;
+  --surface-2: #eef3f7;
+  --surface-3: #e4ebf1;
+  --surface-4: #dbe4ec;
+
+  --border: #d3dde5;
+  --border-soft: #e4ebf1;
+  --border-hi: #bccbd8;
+
+  --text: #16202b;
+  --text-2: #4d5c6a;
+  --text-3: #556370; /* 4.79:1 on the palest surface */
+
+  --accent: #0a6a7c; /* 4.85:1 as text; the gradient below stays bright */
+  --accent-dim: #57a9b8;
+  --accent-wash: #e2f1f4;
+  --accent-hi: #0a6a7c;
+  --accent-fill: #2ab3cc; /* 7.25:1 with --on-accent */
+  --accent-grad-a: #2ab3cc;
+  --accent-grad-b: #0d7d92;
+  --accent-grad-a-hi: #21a3bb;
+  --accent-grad-b-hi: #0a6a7c;
+  --accent-glow: rgba(13, 125, 146, 0.28);
+
+  --sealed: #2f7d52;
+  --sealed-wash: #e3f2e9;
+  --leak: #8a5d0c;
+  --leak-wash: #fbf0da;
+  --blocked: #b23a2e;
+  --blocked-wash: #fbe6e3;
+
+  --shadow: 0 1px 2px rgba(22, 32, 43, 0.06), 0 8px 24px rgba(22, 32, 43, 0.08);
 }
 
 * {
