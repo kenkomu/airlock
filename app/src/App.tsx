@@ -12,6 +12,7 @@ import { IconShield } from './components/Icons';
 import { DenominatePanel } from './components/DenominatePanel';
 import { ConnectWallet, WalletNotice, NetworkBadge } from './components/ConnectWallet';
 import { useWallet } from './hooks/useWallet';
+import { Boundary } from './components/Boundary';
 
 const INITIAL: TransferState = {
   fromId: 137,
@@ -82,9 +83,13 @@ export default function App() {
             the headline, while the one feature that actually moves money was a
             two-line strip above it. Anyone skimming concluded the opposite of
             the truth about what works. */}
-        <DenominatePanel session={session} />
+        <Boundary name="Denominate">
+          <DenominatePanel session={session} />
+        </Boundary>
 
-        <AnonymityPanel state={anon} />
+        <Boundary name="Anonymity set">
+          <AnonymityPanel state={anon} />
+        </Boundary>
 
         <section className="next-up" aria-labelledby="prev-h">
           <div className="next-up-h">
@@ -100,16 +105,20 @@ export default function App() {
           {/* Transfer and its report are a pair and belong side by side: the
               report describes whatever the panel currently proposes. */}
           <div className="grid-main">
-            <TransferPanel
-              onChange={onChange}
-              session={session}
-              onConnect={() => setPickerOpen(true)}
-            />
-            <PrivacyReport
-              report={report}
-              fromName={byId(tx.fromId).name}
-              toName={byId(tx.toId).name}
-            />
+            <Boundary name="Move funds privately">
+              <TransferPanel
+                onChange={onChange}
+                session={session}
+                onConnect={() => setPickerOpen(true)}
+              />
+            </Boundary>
+            <Boundary name="Privacy report">
+              <PrivacyReport
+                report={report}
+                fromName={byId(tx.fromId).name}
+                toName={byId(tx.toId).name}
+              />
+            </Boundary>
           </div>
         </section>
 

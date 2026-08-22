@@ -12,6 +12,7 @@ import { STRK20_MIN_READY, isBelow, isFirefox, rescanWallets, short } from '../l
 import { NETWORKS } from '../lib/networks';
 import { IconWallet } from './Icons';
 import { AccountSheet } from './AccountSheet';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 
 /* Open state is owned by the page, because the primary CTA in the transfer card
    opens this same picker. Two buttons, one dialog. */
@@ -25,10 +26,15 @@ export function ConnectWallet({
   setOpen: (v: boolean) => void;
 }) {
   const closeRef = useRef<HTMLButtonElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
   const [accountOpen, setAccountOpen] = useState(false);
 
   const { state, wallets, connect, disconnect } = session;
   const connecting = state.phase === 'connecting';
+
+  /* Only while the picker is actually open — the markup below is unmounted when
+     it is not, but the flag keeps the trap from arming on a stale ref. */
+  useFocusTrap(dialogRef, open);
 
   useEffect(() => {
     if (state.phase === 'connected') setOpen(false);
@@ -100,6 +106,7 @@ export function ConnectWallet({
           role="presentation"
         >
           <div
+            ref={dialogRef}
             className="sheet"
             role="dialog"
             aria-modal="true"

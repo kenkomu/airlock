@@ -1793,3 +1793,67 @@ main > .card {
 .next-up .card-action {
   border-color: var(--border);
 }
+
+/* ---------- keyboard focus ----------
+   Only two elements in this stylesheet had a focus style, and both were
+   incidental. Everything else fell back to the browser default ring, which on a
+   dark custom-painted button is frequently invisible — so the app was operable
+   by keyboard but not navigable by one, which is the same as not operable.
+
+   :focus-visible rather than :focus, so a pointer click does not leave a ring
+   behind on a button someone just pressed. */
+:where(a, button, input, select, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--r-sm);
+}
+/* The segmented controls and chips paint their own background, so an outline
+   sitting flush against the edge reads as part of the control. Push it out. */
+.seg-btn:focus-visible,
+.chip:focus-visible,
+.tab:focus-visible {
+  outline-offset: 3px;
+}
+
+/* Two inputs killed their own outline and had to be handled by name, because
+   the rule above uses :where() and so carries no specificity to override with.
+
+   The amount field is the one that mattered: it removed the ring and put
+   nothing in its place, leaving the single most important control in the
+   transfer panel with no focus indicator at all. It is borderless by design, so
+   the ring sits well clear of the digits rather than boxing them. */
+.bignum-input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+  border-radius: var(--r-sm);
+}
+/* `.input` does signal focus, by turning its border accent — but a border
+   colour shift alone is a weak cue, and the only one, so it gets the ring too
+   when the focus came from a keyboard. */
+.input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ---------- reduced motion ----------
+   Thirteen transitions and one infinite shimmer ran regardless of the setting.
+   Vestibular triggers aside, an endlessly pulsing skeleton is a poor thing to
+   put in front of someone who has asked the system for stillness.
+
+   Transitions collapse to near-zero rather than to `none`: a 0s transition
+   still fires transitionend, so anything waiting on that keeps working. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  /* The shimmer's whole job is to say "still loading". With the animation gone
+     it would sit as a bare grey block, so it holds a visible resting state. */
+  .skel {
+    background: var(--surface-3);
+  }
+}

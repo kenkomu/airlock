@@ -13,7 +13,7 @@
  * honest way to show a balance in an app like this.
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   formatUnits,
   publicBalances,
@@ -22,6 +22,7 @@ import {
 } from '../lib/wallet';
 import { contractUrl } from '../lib/networks';
 import { IconLock, IconWallet } from './Icons';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 
 export function AccountSheet({
   conn,
@@ -34,6 +35,8 @@ export function AccountSheet({
   onClose: () => void;
   onDisconnect: () => void;
 }) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(dialogRef);
   const [pub, setPub] = useState<ShieldedBalance[] | null>(null);
   /* Distinct from an empty list. "We looked and found nothing" and "we could
      not look" are different facts, and only one of them is reassuring. */
@@ -92,6 +95,7 @@ export function AccountSheet({
   return (
     <div className="sheet-bg" onClick={onClose} role="presentation">
       <div
+        ref={dialogRef}
         className="sheet"
         role="dialog"
         aria-modal="true"
