@@ -410,7 +410,7 @@ function StageLine({
         </div>
       );
     case 'awaiting-signature':
-      return <p className="muted sm">Waiting for your signature.</p>;
+      return <AwaitingSignature />;
     case 'submitted':
       return (
         <p className="muted sm">
@@ -518,5 +518,44 @@ function SplitBar({
         <span className="splitkey-note">each a size other people also use</span>
       </figcaption>
     </figure>
+  );
+}
+
+
+/* Waiting for a wallet that may never answer.
+ *
+ * A browser extension can drop a signature request without telling anyone: the
+ * popup opens behind the window, or is dismissed, or never appears because the
+ * browser suppressed it. The promise then simply never settles, and this panel
+ * said "Waiting for your signature" under a disabled button with no way out —
+ * so the state that needs the most help gave the least.
+ *
+ * There is nothing to cancel; the request belongs to the wallet now. But after
+ * a few seconds, "your wallet should have asked you by now" is far more useful
+ * than a spinner, so the copy escalates rather than the state.
+ */
+function AwaitingSignature() {
+  const [waited, setWaited] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setWaited((n) => n + 1), 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  if (waited < 8) return <p className="muted sm">Waiting for your signature.</p>;
+
+  return (
+    <div className="notice notice-leak" role="status">
+      <strong>Your wallet has not answered.</strong> It should have asked you to
+      approve this by now. Open the wallet extension from your browser toolbar —
+      the request is usually queued there when the popup does not appear, or has
+      opened behind this window.
+      {waited >= 30 && (
+        <>
+          {' '}
+          If there is nothing waiting, the request was dropped: reload the page
+          and try again. Nothing has been signed, and nothing has been spent.
+        </>
+      )}
+    </div>
   );
 }
