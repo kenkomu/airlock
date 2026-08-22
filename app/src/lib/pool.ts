@@ -58,14 +58,28 @@ export const TOKENS: Record<string, { symbol: string; decimals: number }> = {
 const RPCS = [
   'https://rpc.starknet.lava.build',
   'https://api.cartridge.gg/x/starknet/mainnet',
+  'https://starknet-rpc.publicnode.com',
 ];
+
+/* Which endpoint a call starts from, advanced on every request.
+ *
+ * The list was a failover chain: everything went to the first host, and the
+ * others were only tried after it had already failed. A 150-request page load
+ * therefore put 150 requests on one public endpoint — the fastest way to be
+ * rate-limited, and the moment that happens every request fails together
+ * because they were all depending on the same thing.
+ *
+ * Rotating spreads the load and turns one endpoint going down into a third of
+ * requests retrying rather than all of them failing. */
+let rpcCursor = 0;
 
 type RpcResult<T> = { result?: T; error?: { message?: string } };
 
 async function rpc<T>(method: string, params: unknown[]): Promise<T> {
   let lastError = 'no endpoint reached';
+  const start = rpcCursor++;
   for (let attempt = 0; attempt < RPCS.length * 2; attempt += 1) {
-    const url = RPCS[attempt % RPCS.length];
+    const url = RPCS[(start + attempt) % RPCS.length];
     try {
       const res = await fetch(url, {
         method: 'POST',
@@ -297,8 +311,10 @@ export interface Concentration {
 }
 
 /* Bounded because these are public endpoints and a burst of 135 parallel
-   requests is how you get rate-limited into a wrong answer. */
-const SENDER_CONCURRENCY = 6;
+   requests is how you get rate-limited into a wrong answer. Ten rather than
+   six now that requests rotate across three hosts — the cap that matters is
+   per-endpoint, and this is well inside it. */
+const SENDER_CONCURRENCY = 10;
 
 export async function scanConcentration(
   depositTxs: string[],
