@@ -38,6 +38,13 @@
   display: flex;
   align-items: center;
   gap: var(--s3);
+  /* Wraps whenever it must, at every width, rather than at a breakpoint chosen
+     for whatever the header happened to hold that day. Adding the theme control
+     pushed this row to 480px on a 430px phone — a breakpoint set for two items
+     does not survive a third. */
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  min-width: 0;
 }
 
 .badge {
@@ -2112,7 +2119,8 @@ div.amt-sub {
 @media (pointer: coarse) {
   .chip,
   .seg-btn,
-  .leg {
+  .leg,
+  .theme-btn {
     min-height: 44px;
   }
   .sheet-x,
@@ -2141,15 +2149,10 @@ div.amt-sub {
     min-width: 0;
     font-size: 0.82rem;
   }
-  /* The header wraps rather than forcing the page wider than the phone. */
+  /* The header row itself wraps unconditionally — see `.top-right`. */
   .top {
     flex-wrap: wrap;
     row-gap: var(--s2);
-  }
-  .top-right {
-    flex-wrap: wrap;
-    justify-content: flex-end;
-    min-width: 0;
   }
 }
 
