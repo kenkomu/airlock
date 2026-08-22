@@ -25,7 +25,10 @@ export type Stage =
   | { at: 'awaiting-signature'; legs: bigint[]; actions: STRK20_ACTION[] }
   | { at: 'submitted'; hash: string; legs: bigint[] }
   | { at: 'done'; hash: string; legs: bigint[] }
-  | { at: 'failed'; message: string; recoverable: boolean };
+  | { at: 'failed'; message: string; recoverable: boolean }
+  /* The dry run failed in a way that tells us nothing. Not a refusal — a
+     shrug — so it is shown and the transaction is left available. */
+  | { at: 'unverified'; message: string; legs: bigint[]; actions: STRK20_ACTION[] };
 
 export interface DenominateOptions {
   account: WalletAccountV6;
@@ -80,8 +83,25 @@ export async function denominate(opts: DenominateOptions): Promise<string> {
     try {
       await account.strk20PrepareInvoke(actions, true);
     } catch (e) {
-      if (!isUnsupported(e)) {
-        return failed(stage, `The pool rejected this transaction in simulation: ${messageOf(e)}`, true);
+      /* Three outcomes, not two.
+      
+         A wallet with no simulate at all is not an error — that was already
+         handled. But everything else used to be reported as "the pool rejected
+         this transaction", and for a bare UNKNOWN_ERROR that is a claim we
+         cannot support: the wallet's generic failure is not evidence the pool
+         saw anything, let alone refused it. It also blocked the button, so a
+         wallet whose dry run is broken while its real path works could not
+         transact at all.
+      
+         So: a NAMED reason is evidence and still stops here. An unknown one is
+         reported as unknown and leaves the decision with the user, who can see
+         what it cost the last time and what the pool would charge to find out. */
+      if (isUnsupported(e)) {
+        /* Nothing to report — the wallet simply has no dry run. */
+      } else if (isNamedRefusal(e)) {
+        return failed(stage, `The pool refused this transaction in simulation: ${messageOf(e)}`, true);
+      } else {
+        stage({ at: 'unverified', message: messageOf(e), legs, actions });
       }
     }
   }
@@ -127,6 +147,24 @@ function messageOf(e: unknown): string {
 
 function isUnsupported(e: unknown): boolean {
   return /unknown request type|not implemented|unsupported method/i.test(messageOf(e));
+}
+
+/* Did the dry run come back with an actual reason, or just a shrug?
+ *
+ * Cairo asserts arrive as SCREAMING_SNAKE short strings — the pool's own
+ * (UNDEPOSITED_OPEN_NOTES, TOO_MANY_OPEN_NOTES_DEPOSITED, INSUFFICIENT_BALANCE)
+ * and ours (NOT_ON_LADDER, LEG_COUNT_MISMATCH, CALLER_NOT_POOL). Any of those is
+ * a real refusal with a real cause.
+ *
+ * `UNKNOWN_ERROR` is the opposite: it is what a wallet returns when it has
+ * nothing to say, and treating it as a refusal invents a finding. */
+export function isNamedRefusal(e: unknown): boolean {
+  const m = messageOf(e);
+  if (/unknown[_ ]error/i.test(m)) return false;
+  return (
+    /[A-Z][A-Z0-9]+_[A-Z0-9_]+/.test(m) ||
+    /revert|assert|insufficient|not registered|invalid/i.test(m)
+  );
 }
 
 /* A user who declined is not an error state to apologise for. */

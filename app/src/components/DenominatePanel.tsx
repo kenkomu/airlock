@@ -206,7 +206,13 @@ export function DenominatePanel({
     );
   }
 
-  const busy = stage.at !== 'idle' && stage.at !== 'done' && stage.at !== 'failed';
+  const busy =
+    stage.at !== 'idle' &&
+    stage.at !== 'done' &&
+    stage.at !== 'failed' &&
+    /* Not busy: the dry run finished, it just could not tell us anything. The
+       button stays live because an unknown answer is not a refusal. */
+    stage.at !== 'unverified';
 
   return (
     <section className="card card-action card-hero" aria-labelledby="den-h">
@@ -391,6 +397,18 @@ function StageLine({
       return <p className="muted sm">Reading the split from the anonymizer…</p>;
     case 'simulating':
       return <p className="muted sm">Dry run against the pool — free, and unsigned.</p>;
+    case 'unverified':
+      return (
+        <div className="notice notice-leak" role="note">
+          <strong>The dry run could not tell us anything.</strong> Your wallet
+          returned <span className="mono">{stage.message}</span>, which is what it
+          says when it has no reason to give — not evidence the pool refused
+          anything. The split itself is valid: the anonymizer returned{' '}
+          {stage.legs.length} note{stage.legs.length === 1 ? '' : 's'} for this
+          amount. Signing will find out for certain, and costs the network fee
+          whether it works or not.
+        </div>
+      );
     case 'awaiting-signature':
       return <p className="muted sm">Waiting for your signature.</p>;
     case 'submitted':
