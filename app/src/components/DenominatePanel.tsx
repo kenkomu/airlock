@@ -302,7 +302,7 @@ export function DenominatePanel({ session }: { session: WalletSession }) {
           split that was <span className="mono">{OBSERVED_SPONSOR_FEE}</span>{' '}
           against a <span className="mono">{OBSERVED_NETWORK_FEE}</span> network
           fee —{' '}
-          <a className="d-link" href={txUrl(network, OBSERVED_TX)} target="_blank" rel="noreferrer">
+          <a className="tx-link" href={txUrl(network, OBSERVED_TX)} target="_blank" rel="noreferrer">
             check it
           </a>
           . The premium buys the anonymity. Yours may differ; your wallet shows
@@ -329,7 +329,7 @@ export function DenominatePanel({ session }: { session: WalletSession }) {
         every part straight back to the pool in the same transaction. It has no
         owner and cannot be upgraded —{' '}
         <a
-          className="d-link mono"
+          className="tx-link mono"
           href={contractUrl(network, bucketer.address)}
           target="_blank"
           rel="noreferrer"
@@ -365,7 +365,7 @@ function StageLine({
     case 'submitted':
       return (
         <p className="muted sm">
-          Submitted. <a className="d-link mono" href={txUrl(network, stage.hash)} target="_blank" rel="noreferrer">
+          Submitted. <a className="tx-link mono" href={txUrl(network, stage.hash)} target="_blank" rel="noreferrer">
             {stage.hash.slice(0, 10)}…
           </a>
         </p>
@@ -374,7 +374,7 @@ function StageLine({
       return (
         <p className="notice notice-sealed">
           Done — {stage.legs.length} notes of {format(stage.legs[0], bucketer)} and below.{' '}
-          <a className="d-link mono" href={txUrl(network, stage.hash)} target="_blank" rel="noreferrer">
+          <a className="tx-link mono" href={txUrl(network, stage.hash)} target="_blank" rel="noreferrer">
             {stage.hash.slice(0, 10)}…
           </a>
         </p>

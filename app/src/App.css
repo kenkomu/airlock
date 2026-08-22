@@ -41,7 +41,7 @@
 }
 
 .badge {
-  font-size: 0.68rem;
+  font-size: 0.75rem;
   font-weight: 600;
   letter-spacing: 0.08em;
   padding: 4px 9px;
@@ -131,26 +131,26 @@
 }
 .d-chamber {
   font-family: var(--sans);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.13em;
   fill: var(--text-2);
 }
 .d-chamber-sub {
   font-family: var(--mono);
-  font-size: 9.5px;
+  font-size: 12px;
   fill: var(--text-3);
 }
 .d-label {
   font-family: var(--sans);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.06em;
   fill: var(--text-2);
 }
 .d-link {
   font-family: var(--sans);
-  font-size: 9.5px;
+  font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.16em;
   fill: var(--text-3);
@@ -186,7 +186,7 @@
   margin: 0;
 }
 .card-h-note {
-  font-size: 0.68rem;
+  font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.11em;
   color: var(--text-3);
@@ -201,7 +201,7 @@
 }
 
 h3.sub {
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.11em;
   color: var(--text-3);
@@ -238,7 +238,7 @@ p {
   padding: var(--s3);
 }
 .metric-k {
-  font-size: 0.66rem;
+  font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.1em;
   color: var(--text-3);
@@ -251,7 +251,7 @@ p {
   line-height: 1.1;
 }
 .metric-hint {
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   color: var(--text-3);
 }
 
@@ -267,7 +267,7 @@ p {
   line-height: 1.5;
 }
 .verdict-badge {
-  font-size: 0.62rem;
+  font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.1em;
   padding: 3px 7px;
@@ -452,7 +452,7 @@ table {
 }
 th {
   text-align: left;
-  font-size: 0.66rem;
+  font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.1em;
   color: var(--text-3);
@@ -542,7 +542,7 @@ tr:last-child td {
   display: inline-flex;
   align-items: center;
   gap: var(--s2);
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -689,7 +689,7 @@ tr:last-child td {
   font-size: 0.88rem;
 }
 .factor-tag {
-  font-size: 0.6rem;
+  font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.09em;
   text-transform: uppercase;
@@ -757,7 +757,7 @@ tr:last-child td {
 .step-n {
   grid-area: n;
   justify-self: end;
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   color: var(--text-3);
   font-weight: 600;
 }
@@ -806,7 +806,7 @@ tr:last-child td {
   background: var(--bg);
 }
 .swapcard-tag {
-  font-size: 0.66rem;
+  font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.11em;
   color: var(--text-3);
@@ -887,7 +887,7 @@ tr:last-child td {
 }
 
 .quick-l {
-  font-size: 0.68rem;
+  font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.1em;
   color: var(--text-3);
@@ -996,7 +996,13 @@ body::before {
 }
 @media (max-width: 980px) {
   .grid-main {
-    grid-template-columns: 1fr;
+    /* minmax(0, 1fr), NOT 1fr. Bare `1fr` is `minmax(auto, 1fr)`, and the auto
+       floor is min-content — which a card full of unbreakable numbers and
+       monospace can push past the container. The two-column rule above got this
+       right and the single-column override lost it, so the grid sat at 412px
+       inside a 288px parent and the whole page scrolled sideways below 380px.
+       Nothing looked wrong at desktop, which is why it survived this long. */
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -1059,7 +1065,7 @@ body::before {
   gap: var(--s2);
 }
 .swapcard-tag {
-  font-size: 0.66rem;
+  font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.11em;
   color: var(--text-3);
@@ -1103,7 +1109,7 @@ body::before {
   margin-top: var(--s1);
 }
 .split-l {
-  font-size: 0.66rem;
+  font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.11em;
   color: var(--text-3);
@@ -1129,7 +1135,7 @@ body::before {
 }
 .leg-x {
   font-style: normal;
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   opacity: 0.6;
   margin-left: 3px;
 }
@@ -1168,7 +1174,7 @@ body::before {
   border-top: 1px solid var(--border-soft);
 }
 .ref-h {
-  font-size: 0.68rem;
+  font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.15em;
   color: var(--text-3);
@@ -1291,7 +1297,7 @@ body::before {
   flex: none;
 }
 .amt-sub {
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   letter-spacing: 0.08em;
   color: var(--text-3);
 }
@@ -1304,7 +1310,7 @@ body::before {
   align-items: flex-start;
 }
 .verdict-eyebrow {
-  font-size: 0.64rem;
+  font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.14em;
   font-weight: 600;
@@ -1443,7 +1449,7 @@ body::before {
   letter-spacing: 0.01em;
 }
 .tokrow-name {
-  font-size: 0.74rem;
+  font-size: 0.75rem;
   color: var(--text-3);
 }
 .tokrow-val {
@@ -1457,7 +1463,7 @@ body::before {
   font-weight: 600;
 }
 .tokrow-tag {
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   color: var(--text-3);
 }
 .tokrow-thin {
@@ -1534,7 +1540,7 @@ body::before {
   box-shadow: 0 0 0 3px rgba(217, 154, 43, 0.16);
 }
 .addr-off {
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   color: var(--text-3);
   padding-left: var(--s2);
   border-left: 1px solid var(--border);
@@ -1706,7 +1712,7 @@ main > .card {
 .acct-copy {
   margin-left: auto;
   flex-shrink: 0;
-  font-size: 0.68rem;
+  font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.1em;
   color: var(--text-3);
@@ -1773,7 +1779,7 @@ main > .card {
 }
 .next-up-tag {
   font-family: var(--mono);
-  font-size: 0.68rem;
+  font-size: 0.75rem;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--leak);
@@ -2005,7 +2011,7 @@ main > .card {
   display: flex;
   justify-content: space-between;
   gap: var(--s3);
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--text-3);
@@ -2062,4 +2068,246 @@ main > .card {
     width: auto;
     max-height: 70vh;
   }
+}
+
+/* ---------- measured responsive fixes ----------
+   Found by walking 14 viewports from 320 to 2560 rather than by eye. Two
+   failures, and both were at EVERY width, not only on phones — which is why
+   nothing caught them: they do not look like responsive bugs. */
+
+/* 0.68rem is 10.88px, under the 12px floor for body text. These are uppercase
+   micro-labels, so they were legible enough to pass a glance and not legible
+   enough for someone who needs them. */
+.badge,
+.card-h-note,
+.next-up-tag,
+.who,
+.metric-k,
+.metric-hint,
+.wcard-net,
+.wcard-copy,
+.field-l,
+.tokrow-name,
+.tokrow-tag,
+.splitrow .muted {
+  font-size: 0.75rem; /* 12px — the floor for anything anyone has to read */
+}
+
+/* These three need the element in the selector to outrank their own earlier
+   rules (`h3.sub` is 0,1,1 and beats a bare `.sub`). Raising specificity rather
+   than reaching for !important, so the next person can still override them. */
+h3.sub,
+span.swapcard-tag,
+span.amt-sub,
+div.amt-sub {
+  font-size: 0.75rem;
+}
+
+/* Touch targets. 30px is comfortably under the 44px minimum, and the
+   denomination chips are the control people tap most.
+
+   `pointer: coarse` rather than a width breakpoint: the constraint is the
+   finger, not the screen. A touchscreen laptop needs the bigger target and a
+   narrow desktop window does not. */
+@media (pointer: coarse) {
+  .chip,
+  .seg-btn,
+  .leg {
+    min-height: 44px;
+  }
+  .sheet-x,
+  .linkbtn {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* Narrow phones. `.quick-row` is a nine-item flex row of chips that cannot
+   shrink below their own text, so at 375px and under it lays out 412px wide and
+   scrolls the page. A grid gives each chip a share of the width instead of a
+   floor of its own, and the address groups halve so eight hex characters still
+   fit on a line. */
+@media (max-width: 420px) {
+  .wcard-num {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .quick-row {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--s2);
+  }
+  .quick-row .chip {
+    flex: none;
+    min-width: 0;
+    font-size: 0.82rem;
+  }
+  /* The header wraps rather than forcing the page wider than the phone. */
+  .top {
+    flex-wrap: wrap;
+    row-gap: var(--s2);
+  }
+  .top-right {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    min-width: 0;
+  }
+}
+
+/* ---------- the account card ----------
+   A card, because that is the object people already read a balance and an
+   account number off. What it deliberately does not copy is the crypto-card
+   house style — the gradient mesh, the holographic sheen, the gold. Airlock's
+   argument is that it does not dress things up, and money that is genuinely
+   hidden should not be presented like a luxury object.
+
+   So: one flat elevated surface, a hairline, and a single cyan edge that is the
+   same accent the live path uses everywhere else in the app. */
+.wcard {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s1);
+  padding: var(--s4);
+  border-radius: var(--r-lg);
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+/* The seal: a single cyan line along the top edge. The same device the live
+   Denominate card uses, so the two read as one system. */
+.wcard::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--accent), transparent 72%);
+}
+.wcard-top {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  margin-bottom: var(--s2);
+}
+.wcard-seal {
+  display: inline-flex;
+  color: var(--accent);
+  flex: none;
+}
+.wcard-issuer {
+  font-size: 0.75rem;
+  color: var(--text-2);
+  font-weight: 500;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.wcard-net {
+  margin-left: auto;
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  flex: none;
+}
+.wcard-bal {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s2);
+  flex-wrap: wrap;
+}
+.wcard-bal-v {
+  font-size: clamp(1.9rem, 9vw, 2.4rem);
+  font-weight: 500;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.wcard-bal-sym {
+  font-size: 0.95rem;
+  color: var(--text-2);
+  font-weight: 500;
+}
+.wcard-bal-none {
+  font-size: 1.05rem;
+  color: var(--text-3);
+}
+.wcard-bal-k {
+  font-size: 0.75rem;
+  color: var(--text-3);
+  margin-bottom: var(--s3);
+}
+
+/* Grouped in eights, for the same reason a card number is grouped: 64 unbroken
+   hex characters cannot be read aloud, checked against another screen, or
+   resumed after looking away. */
+.wcard-num {
+  /* A grid rather than wrapping flex: eight groups land as a predictable 4x2
+     block at every width, and `copy` gets its own row instead of being pushed
+     onto one by `margin-left:auto` and clipping against the card edge. */
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px var(--s2);
+  align-items: center;
+  width: 100%;
+  padding: var(--s2);
+  background: var(--surface-2);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--r);
+  color: var(--text-2);
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color var(--t), color var(--t);
+}
+.wcard-num:hover {
+  border-color: var(--accent-dim);
+  color: var(--text);
+}
+.wcard-copy {
+  grid-column: 1 / -1;
+  justify-self: end;
+  margin-top: 2px;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  flex: none;
+}
+
+
+/* ---------- links that are actually links ----------
+   `.d-link` is SVG <text> inside the seal diagram: 9.5px, wide tracking, and a
+   `fill` that does nothing on HTML. It was also being used on real anchors —
+   including every transaction hash — so those rendered at 9.5px with 0.16em
+   letter-spacing. Two different things had one class name. */
+.tx-link {
+  color: var(--accent);
+  font-size: 0.8rem;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  word-break: break-all;
+}
+.tx-link:hover {
+  color: var(--text);
+}
+
+
+/* ---------- the seal diagram ----------
+   A viewBox scales its text down with everything else, so on a 320px phone the
+   11px labels were rendering at 5.4px — measured, not guessed. No font-size
+   inside the SVG can fix that, because the unit itself is being scaled.
+
+   So the figure stops shrinking below the width where its labels are legible,
+   and scrolls inside its own box instead. Wide content scrolls in its container,
+   never the page body. */
+.seal {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+}
+.seal svg {
+  min-width: 520px;
 }

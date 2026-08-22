@@ -44,6 +44,12 @@ export function AccountSheet({
   const [pubFailed, setPubFailed] = useState(false);
   const [copied, setCopied] = useState(false);
 
+  /* The largest shielded holding is the card's number; everything else is
+     listed under it. Split here so neither can print the other's figure. */
+  const [lead, ...others] = [...shielded]
+    .filter((b) => b.amount > 0n)
+    .sort((a, b) => (b.amount > a.amount ? 1 : b.amount < a.amount ? -1 : 0));
+
   /* Read once per open. It is local storage, so there is nothing to await and
      nothing to re-read while the sheet is up. */
   const [splits] = useState<Split[]>(() =>
@@ -116,32 +122,81 @@ export function AccountSheet({
           Your account
         </h2>
 
-        {/* Wallet and network first, small: context for everything under it. */}
-        <div className="pop-meta">
-          <span>
-            {conn.wallet.name}
-            {conn.walletVersion ? ` ${conn.walletVersion}` : ''}
-          </span>
-          <span className={conn.network ? '' : 'pop-meta-warn'}>
-            {conn.network?.name ?? 'unknown network'}
-          </span>
+        {/* A card, because that is what this is: an account, a balance, and an
+            identifying number. The metaphor is borrowed from the object people
+            already read this information off.
+            
+            What it does NOT borrow is the usual crypto-card look — the gradient
+            mesh, the holographic sheen. Airlock's whole argument is that it does
+            not dress things up, and a balance that is genuinely hidden should
+            not be presented like a luxury object. The seal at the top is the
+            project's own mechanism, and the number below is the one the pool
+            actually holds. */}
+        <div className="wcard">
+          <div className="wcard-top">
+            <span className="wcard-seal" aria-hidden="true">
+              <IconLock />
+            </span>
+            <span className="wcard-issuer">
+              {conn.wallet.name}
+              {conn.walletVersion ? ` ${conn.walletVersion}` : ''}
+            </span>
+            <span className={`wcard-net${conn.network ? '' : ' pop-meta-warn'}`}>
+              {conn.network?.name ?? 'unknown network'}
+            </span>
+          </div>
+
+          <div className="wcard-bal">
+            {lead ? (
+              <>
+                <span className="wcard-bal-v mono">
+                  {formatUnits(lead.amount, lead.decimals, lead.decimals > 6 ? 4 : 2)}
+                </span>
+                <span className="wcard-bal-sym">{lead.symbol}</span>
+              </>
+            ) : (
+              <span className="wcard-bal-none">Nothing shielded yet</span>
+            )}
+          </div>
+          <span className="wcard-bal-k">Private balance · held as notes in the pool</span>
+
+          {/* Grouped like the number on a card, which is the reason cards group
+              theirs: 64 unbroken hex characters cannot be read back or checked
+              against another screen. */}
+          <button type="button" className="wcard-num mono" onClick={copy} title="Copy address">
+            {conn.address.replace(/^0x/, '').match(/.{1,8}/g)?.map((g, i) => (
+              <span className="wcard-grp" key={i}>
+                {g}
+              </span>
+            ))}
+            <span className="wcard-copy">{copied ? 'copied' : 'copy'}</span>
+          </button>
         </div>
 
         {/* Private leads, and its largest holding is the headline rather than a
             row in a list — it is the number the panel is opened for. It used to
             be printed twice, once as a heading and again in the list under it. */}
-        <BalanceGroup
-          title="Private"
-          hint="Held as notes in the pool. Nobody reading the chain can see these."
-          icon={<IconLock />}
-          rows={shielded}
-          lead
-          empty={
-            conn.support.kind === 'unregistered'
-              ? 'Nothing yet — this account has not shielded anything.'
-              : 'Nothing shielded.'
-          }
-        />
+        {/* Only what the card does not already show. The card carries the
+            largest private holding, so repeating it here would print the same
+            number twice on one panel — which is the bug this replaced, and it
+            came back the moment the card took over the headline. */}
+        {others.length > 0 && (
+          <BalanceGroup
+            title="Other private tokens"
+            hint="Also held as notes in the pool."
+            icon={<IconLock />}
+            rows={others}
+            empty=""
+          />
+        )}
+
+        {!lead && (
+          <p className="muted sm">
+            {conn.support.kind === 'unregistered'
+              ? 'This account has not shielded anything yet. Shield some in your wallet and it will appear here.'
+              : 'Nothing shielded.'}
+          </p>
+        )}
 
         <BalanceGroup
           title="Public"
@@ -185,7 +240,7 @@ export function AccountSheet({
                     ))}
                   </div>
                   <a
-                    className="d-link mono sm"
+                    className="tx-link mono"
                     href={txUrl(conn.network!, sp.hash)}
                     target="_blank"
                     rel="noreferrer"
@@ -198,31 +253,18 @@ export function AccountSheet({
           </section>
         )}
 
-        {/* The address last, and in full. It is reference material — you open
-            this panel to see a balance, not an address — but when you do want
-            it you want the whole thing to copy, not a truncation. */}
-        <section className="acct-group">
-          <div className="acct-group-h">
-            <IconWallet />
-            <strong>Address</strong>
-          </div>
-          <button type="button" className="acct-addr mono" onClick={copy} title="Copy address">
-            {conn.address}
-            <span className="acct-copy">{copied ? 'copied' : 'copy'}</span>
-          </button>
-          {conn.network && (
-            <p className="muted sm">
-              <a
-                className="d-link"
-                href={contractUrl(conn.network, conn.address)}
-                target="_blank"
-                rel="noreferrer"
-              >
-                View on {conn.network.explorer.replace(/^https:\/\//, '')} ↗
-              </a>
-            </p>
-          )}
-        </section>
+        {conn.network && (
+          <p className="muted sm">
+            <a
+              className="tx-link"
+              href={contractUrl(conn.network, conn.address)}
+              target="_blank"
+              rel="noreferrer"
+            >
+              View on {conn.network.explorer.replace(/^https:\/\//, '')} ↗
+            </a>
+          </p>
+        )}
 
         <button type="button" className="btn" onClick={onDisconnect}>
           Disconnect
