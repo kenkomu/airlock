@@ -12,6 +12,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { fetchPlan } from '../lib/actions';
 import { denominate, format, type Stage } from '../lib/denominate';
 import { SN_MAIN, bucketerFor, contractUrl, txUrl, type Bucketer, type Network } from '../lib/networks';
+import { recordSplit } from '../lib/history';
 import type { WalletSession } from '../hooks/useWallet';
 import { IconLock } from './Icons';
 
@@ -101,7 +102,24 @@ export function DenominatePanel({ session }: { session: WalletSession }) {
         bucketer,
         owner: conn.address,
         amount,
-        onStage: setStage,
+        onStage: (st) => {
+          setStage(st);
+          /* Keep the receipt the moment the hash exists, not once it confirms.
+             A submitted transaction that we then failed to read is exactly the
+             one someone needs the hash for. */
+          if (st.at === 'submitted' && conn.network) {
+            recordSplit({
+              hash: st.hash,
+              address: conn.address,
+              chainId: conn.network.chainId,
+              token: bucketer.token,
+              symbol: bucketer.symbol,
+              decimals: bucketer.decimals,
+              amount: amount.toString(),
+              legs: st.legs.map((l) => l.toString()),
+            });
+          }
+        },
       });
       await session.refresh();
     } catch {

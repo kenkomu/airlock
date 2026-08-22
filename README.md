@@ -22,7 +22,7 @@ The honest answer to "can I use this". Deliberately placed before the design, so
 | ✅ | Anonymity-set and timing disclosure, read live from the mainnet pool — no wallet required |
 | ✅ | Connect a privacy-enabled Starknet wallet and read a shielded balance (`WalletAccountV6`, `strk20Balances`) |
 | ✅ | Split a shielded balance into standard note sizes, with the split read from the contract rather than computed in the client |
-
+| ✅ | **A real mainnet round trip** — 8.4 STRK split into 5 + 2.5 + 0.5 + 0.1×4 through the anonymizer, [`0x03f52e1b…3a50`](https://voyager.online/tx/0x03f52e1bddd716344f5dd3c43ba2b81eb1aefb0bc7791aba3e54051b40963a50) |
 | ⬜ | Bridge in over CCTP, and withdraw to a different chain |
 | ⬜ | Starknet account derived deterministically from an EVM signature; sponsored registration |
 

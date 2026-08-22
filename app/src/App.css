@@ -1902,3 +1902,56 @@ main > .card {
   border-radius: var(--r-sm);
   padding: 2px 8px;
 }
+
+/* ---------- account sheet: the balance, then the receipts ----------
+   The sheet listed the private balance as one row among several, at the same
+   weight as everything else. A wallet gives the balance the headline because it
+   is the thing you opened the panel to see. */
+.acct-lead {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--s4) 0 var(--s3);
+  border-bottom: 1px solid var(--border-soft);
+}
+.acct-lead-v {
+  font-size: clamp(1.7rem, 6vw, 2.2rem);
+  font-weight: 500;
+  letter-spacing: -0.03em;
+  color: var(--text);
+  line-height: 1.1;
+}
+.acct-lead-sym {
+  font-size: 0.5em;
+  color: var(--text-2);
+  letter-spacing: 0;
+}
+
+/* Each past split, with its legs shown the same way the panel showed them when
+   it was made — so the receipt looks like the thing you approved. */
+.splitlist {
+  list-style: none;
+  margin: var(--s3) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s3);
+}
+.splitrow {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+  padding: var(--s3);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--r);
+  background: var(--surface-2);
+}
+.splitrow-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s3);
+}
+.splitrow .split-row {
+  margin: 0;
+}

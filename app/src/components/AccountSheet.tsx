@@ -20,7 +20,8 @@ import {
   type Connection,
   type ShieldedBalance,
 } from '../lib/wallet';
-import { contractUrl } from '../lib/networks';
+import { contractUrl, txUrl } from '../lib/networks';
+import { ago, splitsFor, type Split } from '../lib/history';
 import { IconLock, IconWallet } from './Icons';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 
@@ -42,6 +43,12 @@ export function AccountSheet({
      not look" are different facts, and only one of them is reassuring. */
   const [pubFailed, setPubFailed] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  /* Read once per open. It is local storage, so there is nothing to await and
+     nothing to re-read while the sheet is up. */
+  const [splits] = useState<Split[]>(() =>
+    conn.network ? splitsFor(conn.address, conn.network.chainId) : [],
+  );
 
   /* Public balances are a plain chain read — no wallet, no signature, no cost.
      Only the tokens this deployment knows about, since a full token scan is a
@@ -121,6 +128,29 @@ export function AccountSheet({
           </button>
         </div>
 
+        {/* The private total, given the weight a wallet gives a balance. The
+            two columns below still carry the honest breakdown; this just stops
+            the number the whole app is about from being one row in a list. */}
+        {(() => {
+          const held = shielded.filter((b) => b.amount > 0n);
+          if (held.length === 0) return null;
+          const lead = held.reduce((a, b) => (b.amount > a.amount ? b : a));
+          return (
+            <div className="acct-lead">
+              <span className="metric-k">Private balance</span>
+              <span className="acct-lead-v mono">
+                {formatUnits(lead.amount, lead.decimals, lead.decimals > 6 ? 4 : 2)}{' '}
+                <span className="acct-lead-sym">{lead.symbol}</span>
+              </span>
+              {held.length > 1 && (
+                <span className="metric-hint">
+                  plus {held.length - 1} other token{held.length > 2 ? 's' : ''} below
+                </span>
+              )}
+            </div>
+          );
+        })()}
+
         {/* Private first: it is the balance this app is about. */}
         <BalanceGroup
           title="Private"
@@ -146,6 +176,48 @@ export function AccountSheet({
               : 'Nothing held publicly, of the tokens Airlock knows about.'
           }
         />
+
+        {conn.network && splits.length > 0 && (
+          <section className="acct-group">
+            <div className="acct-group-h">
+              <IconLock />
+              <strong>Your splits</strong>
+            </div>
+            <p className="muted sm">
+              Kept in this browser only, never sent anywhere. A record of your
+              splits is exactly what an observer would want, so it does not leave
+              your machine.
+            </p>
+            <ul className="splitlist">
+              {splits.map((sp) => (
+                <li className="splitrow" key={sp.hash}>
+                  <div className="splitrow-top">
+                    <span className="mono">
+                      {formatUnits(BigInt(sp.amount), sp.decimals, sp.decimals > 6 ? 4 : 2)}{' '}
+                      {sp.symbol}
+                    </span>
+                    <span className="muted sm">{ago(sp.at)}</span>
+                  </div>
+                  <div className="split-row">
+                    {sp.legs.map((l, i) => (
+                      <span className="leg" key={i}>
+                        {formatUnits(BigInt(l), sp.decimals, sp.decimals > 6 ? 4 : 2)}
+                      </span>
+                    ))}
+                  </div>
+                  <a
+                    className="d-link mono sm"
+                    href={txUrl(conn.network!, sp.hash)}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    {sp.hash.slice(0, 10)}…{sp.hash.slice(-4)} ↗
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
 
         {conn.network && (
           <p className="muted sm">
