@@ -68,7 +68,17 @@ const MAINNET: Network = {
   name: 'Starknet',
   rpcUrls: ['https://rpc.starknet.lava.build', 'https://starknet-rpc.publicnode.com'],
   pool: '0x040337b1af3c663e86e333bab5a4b28da8d4652a15a69beee2b677776ffe812a',
-  bucketers: [],
+  bucketers: [
+    /* STRK, 0.1-STRK rungs. STRK is 67% of recent mainnet pool deposits — the
+       biggest crowd to hide in, so it is the token to serve first. */
+    {
+      address: '0x036816fe3c38b222e737ec4168b604309ab24154862d1a3f4c9db0042a90e97a',
+      token: STRK,
+      symbol: 'STRK',
+      decimals: 18,
+      unit: 100_000_000_000_000_000n,
+    },
+  ],
   /* The same set the anonymity scan recognises, so the two panels agree about
      which tokens exist. SLAY and WBTC are here because the pool takes them. */
   tokens: [

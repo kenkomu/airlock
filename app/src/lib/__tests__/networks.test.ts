@@ -10,7 +10,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { NETWORKS, bucketerFor, networkFor } from '../networks';
+import { NETWORKS, SN_MAIN, bucketerFor, networkFor } from '../networks';
 
 describe('the network table', () => {
   it('can read balances on every network, including ones with no bucketer', () => {
@@ -21,11 +21,17 @@ describe('the network table', () => {
     }
   });
 
-  it('still reads tokens on mainnet, which has no bucketers deployed', () => {
-    const main = NETWORKS.find((n) => n.bucketers.length === 0);
-    expect(main, 'expected a network with no bucketers to exist').toBeDefined();
-    expect(main!.tokens.length).toBeGreaterThan(0);
-    expect(main!.tokens.map((t) => t.symbol)).toContain('STRK');
+  it('reads more tokens than it routes, so the two lists cannot be the same one', () => {
+    /* Originally phrased as "mainnet, which has no bucketers deployed" — which
+       stopped being true the moment one was, and failed for the right reason.
+       The invariant was never about mainnet being empty; it is that `tokens` is
+       not derived from `bucketers`. A network that reads strictly more tokens
+       than it can route demonstrates that directly, and keeps demonstrating it
+       as bucketers are added. */
+    const main = NETWORKS.find((n) => n.chainId === SN_MAIN)!;
+    expect(main).toBeDefined();
+    expect(main.tokens.length).toBeGreaterThan(main.bucketers.length);
+    expect(main.tokens.map((t) => t.symbol)).toContain('STRK');
   });
 
   it('lists every token a bucketer routes, so the two panels agree', () => {

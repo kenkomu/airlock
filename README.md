@@ -16,12 +16,13 @@ The honest answer to "can I use this". Deliberately placed before the design, so
 |---|---|
 | ✅ | **Live demo**, deployed from `main` on every push and gated on the test suite |
 | ✅ | **`AirlockBucketer` anonymizer in Cairo** — denomination bucketing, the mitigation StarkWare's own threat model defers ([docs/anonymizer.md](docs/anonymizer.md)) |
+| ✅ | **Deployed to mainnet** — a STRK bucketer at [`0x036816fe…e97a`](https://voyager.online/contract/0x036816fe3c38b222e737ec4168b604309ab24154862d1a3f4c9db0042a90e97a), constructor values re-read from chain |
 | ✅ | **Deployed to Sepolia** — two bucketers, STRK and USDC, both verified against chain |
 | ✅ | **The real pool calls it** — the deployed Sepolia pool runs its real entry point against our deployed contract ([below](#the-pool-really-does-call-it)) |
 | ✅ | Anonymity-set and timing disclosure, read live from the mainnet pool — no wallet required |
 | ✅ | Connect a privacy-enabled Starknet wallet and read a shielded balance (`WalletAccountV6`, `strk20Balances`) |
 | ✅ | Split a shielded balance into standard note sizes, with the split read from the contract rather than computed in the client |
-| ⬜ | Anonymizer deployed to **mainnet** |
+
 | ⬜ | Bridge in over CCTP, and withdraw to a different chain |
 | ⬜ | Starknet account derived deterministically from an EVM signature; sponsored registration |
 
@@ -156,7 +157,7 @@ Fork tests are excluded from CI on purpose: they need network access and a publi
 | Sepolia pool | [`0x0254a6b2…0d91`](https://sepolia.voyager.online/contract/0x254a6b2997ef52e9f830ce1f543f6b29768295e8d17e2267d672c552cfe0d91) |
 | Bucketer — Sepolia STRK, 0.1 rungs | [`0x00de39f7…0e6b`](https://sepolia.voyager.online/contract/0x00de39f79e7e8b0dcdafe955330e206990203d6047a22e853eab9df83c440e6b) |
 | Bucketer — Sepolia USDC, 1.0 rungs | [`0x004c368a…b1fb`](https://sepolia.voyager.online/contract/0x004c368ae058ee81b61884c5c47ee57484c4348669b66ac606366bbd1fd1b1fb) |
-| Bucketer — mainnet | not yet deployed |
+| Bucketer — mainnet STRK, 0.1 rungs | [`0x036816fe…e97a`](https://voyager.online/contract/0x036816fe3c38b222e737ec4168b604309ab24154862d1a3f4c9db0042a90e97a) |
 
 Addresses are also machine-readable in [`strk20.json`](strk20.json). Deploying is scripted, with a preflight that re-checks both constructor addresses are live contracts before anything is spent — see [docs/deploy.md](docs/deploy.md).
 
