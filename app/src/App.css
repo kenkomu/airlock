@@ -1955,3 +1955,111 @@ main > .card {
 .splitrow .split-row {
   margin: 0;
 }
+
+/* ---------- account popover ----------
+   Anchored to the address pill instead of floating centre-screen. The panel is
+   about the account named on that pill, and a centred modal severs the link —
+   you lose which control you opened, and the page dims behind something that is
+   only ever read. */
+.addr-anchor {
+  position: relative;
+}
+.addr-caret {
+  width: 0;
+  height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 5px solid var(--text-3);
+  transition: transform var(--t);
+  flex: none;
+}
+.addr-caret-up {
+  transform: rotate(180deg);
+}
+
+/* Catches the click that dismisses, without dimming the page. */
+.pop-catch {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+}
+.pop {
+  position: absolute;
+  top: calc(100% + var(--s2));
+  right: 0;
+  z-index: 41;
+  width: min(360px, calc(100vw - 2 * var(--s4)));
+  max-height: min(78vh, 720px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s4);
+  padding: var(--s4);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow);
+}
+.pop-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--s3);
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+.pop-meta-warn {
+  color: var(--leak);
+}
+
+/* The headline balance. Monospace already gives tabular figures, so the number
+   cannot jog sideways as it updates. */
+.bal-lead {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s2);
+  margin: var(--s1) 0 var(--s2);
+}
+.bal-lead-v {
+  font-size: clamp(1.8rem, 7vw, 2.3rem);
+  font-weight: 500;
+  letter-spacing: -0.03em;
+  color: var(--text);
+  line-height: 1.05;
+  font-variant-numeric: tabular-nums;
+}
+.bal-lead-sym {
+  font-size: 0.95rem;
+  color: var(--text-2);
+  font-weight: 500;
+}
+
+/* Visually hidden, still read aloud — the panel needs a name for screen
+   readers, but a heading above the balance would push the number down for
+   everyone else. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (max-width: 560px) {
+  /* No room to anchor on a phone: fall back to a sheet pinned under the header,
+     which is where the pill is anyway. */
+  .pop {
+    position: fixed;
+    top: auto;
+    right: var(--s4);
+    left: var(--s4);
+    width: auto;
+    max-height: 70vh;
+  }
+}

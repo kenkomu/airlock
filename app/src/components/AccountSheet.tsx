@@ -100,63 +100,42 @@ export function AccountSheet({
   }, [onClose]);
 
   return (
-    <div className="sheet-bg" onClick={onClose} role="presentation">
+    <>
+      {/* An invisible catcher rather than a dimming backdrop. Clicking away
+          should close the panel, but darkening the whole page for something you
+          only read — never fill in — overstates what is happening. */}
+      <div className="pop-catch" onClick={onClose} role="presentation" />
       <div
         ref={dialogRef}
-        className="sheet"
+        className="pop"
         role="dialog"
-        aria-modal="true"
         aria-labelledby="acct-h"
         onClick={(e) => e.stopPropagation()}
       >
-        <header className="sheet-h">
-          <h2 id="acct-h">Your account</h2>
-          <button type="button" className="sheet-x" onClick={onClose} aria-label="Close">
-            &times;
-          </button>
-        </header>
+        <h2 id="acct-h" className="sr-only">
+          Your account
+        </h2>
 
-        <div className="acct-id">
-          <span className="field-l">
+        {/* Wallet and network first, small: context for everything under it. */}
+        <div className="pop-meta">
+          <span>
             {conn.wallet.name}
-            {conn.walletVersion ? ` ${conn.walletVersion}` : ''} ·{' '}
+            {conn.walletVersion ? ` ${conn.walletVersion}` : ''}
+          </span>
+          <span className={conn.network ? '' : 'pop-meta-warn'}>
             {conn.network?.name ?? 'unknown network'}
           </span>
-          <button type="button" className="acct-addr mono" onClick={copy} title="Copy address">
-            {conn.address}
-            <span className="acct-copy">{copied ? 'copied' : 'copy'}</span>
-          </button>
         </div>
 
-        {/* The private total, given the weight a wallet gives a balance. The
-            two columns below still carry the honest breakdown; this just stops
-            the number the whole app is about from being one row in a list. */}
-        {(() => {
-          const held = shielded.filter((b) => b.amount > 0n);
-          if (held.length === 0) return null;
-          const lead = held.reduce((a, b) => (b.amount > a.amount ? b : a));
-          return (
-            <div className="acct-lead">
-              <span className="metric-k">Private balance</span>
-              <span className="acct-lead-v mono">
-                {formatUnits(lead.amount, lead.decimals, lead.decimals > 6 ? 4 : 2)}{' '}
-                <span className="acct-lead-sym">{lead.symbol}</span>
-              </span>
-              {held.length > 1 && (
-                <span className="metric-hint">
-                  plus {held.length - 1} other token{held.length > 2 ? 's' : ''} below
-                </span>
-              )}
-            </div>
-          );
-        })()}
-
-        {/* Private first: it is the balance this app is about. */}
+        {/* Private leads, and its largest holding is the headline rather than a
+            row in a list — it is the number the panel is opened for. It used to
+            be printed twice, once as a heading and again in the list under it. */}
         <BalanceGroup
           title="Private"
-          hint="Held as notes in the pool. Not visible to anyone reading the chain."
+          hint="Held as notes in the pool. Nobody reading the chain can see these."
           icon={<IconLock />}
           rows={shielded}
+          lead
           empty={
             conn.support.kind === 'unregistered'
               ? 'Nothing yet — this account has not shielded anything.'
@@ -219,24 +198,37 @@ export function AccountSheet({
           </section>
         )}
 
-        {conn.network && (
-          <p className="muted sm">
-            <a
-              className="d-link mono"
-              href={contractUrl(conn.network, conn.address)}
-              target="_blank"
-              rel="noreferrer"
-            >
-              View on {conn.network.explorer.replace(/^https:\/\//, '')} ↗
-            </a>
-          </p>
-        )}
+        {/* The address last, and in full. It is reference material — you open
+            this panel to see a balance, not an address — but when you do want
+            it you want the whole thing to copy, not a truncation. */}
+        <section className="acct-group">
+          <div className="acct-group-h">
+            <IconWallet />
+            <strong>Address</strong>
+          </div>
+          <button type="button" className="acct-addr mono" onClick={copy} title="Copy address">
+            {conn.address}
+            <span className="acct-copy">{copied ? 'copied' : 'copy'}</span>
+          </button>
+          {conn.network && (
+            <p className="muted sm">
+              <a
+                className="d-link"
+                href={contractUrl(conn.network, conn.address)}
+                target="_blank"
+                rel="noreferrer"
+              >
+                View on {conn.network.explorer.replace(/^https:\/\//, '')} ↗
+              </a>
+            </p>
+          )}
+        </section>
 
         <button type="button" className="btn" onClick={onDisconnect}>
           Disconnect
         </button>
       </div>
-    </div>
+    </>
   );
 }
 
@@ -247,6 +239,7 @@ function BalanceGroup({
   rows,
   loading,
   empty,
+  lead,
 }: {
   title: string;
   hint: string;
@@ -254,9 +247,47 @@ function BalanceGroup({
   rows: ShieldedBalance[];
   loading?: boolean;
   empty: string;
+  /* Render the largest holding at display size. One group gets this — the one
+     the panel exists to show. */
+  lead?: boolean;
 }) {
   /* A zero balance is noise in a list someone is scanning for what they have. */
   const held = rows.filter((r) => r.amount > 0n);
+  /* Biggest first, so the lead row is the meaningful one and the list below
+     reads in descending order like every other balance list. */
+  const sorted = [...held].sort((a, b) => (b.amount > a.amount ? 1 : b.amount < a.amount ? -1 : 0));
+  const [top, ...rest] = sorted;
+
+  if (lead && top) {
+    return (
+      <section className="acct-group">
+        <div className="acct-group-h">
+          {icon}
+          <strong>{title}</strong>
+        </div>
+        <div className="bal-lead">
+          <span className="bal-lead-v mono">
+            {formatUnits(top.amount, top.decimals, top.decimals > 6 ? 4 : 2)}
+          </span>
+          <span className="bal-lead-sym">{top.symbol}</span>
+        </div>
+        <p className="muted sm">{hint}</p>
+        {rest.length > 0 && (
+          <ul className="toklist">
+            {rest.map((r) => (
+              <li className="tokrow tokrow-thin" key={`${title}-${r.token}`}>
+                <span className="tokrow-sym">{r.symbol}</span>
+                <span className="tokrow-val mono">
+                  {formatUnits(r.amount, r.decimals, r.decimals > 6 ? 4 : 2)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+    );
+  }
+
   return (
     <section className="acct-group">
       <div className="acct-group-h">
@@ -270,7 +301,7 @@ function BalanceGroup({
         <p className="muted sm">{empty}</p>
       ) : (
         <ul className="toklist">
-          {held.map((r) => (
+          {sorted.map((r) => (
             <li className="tokrow tokrow-thin" key={`${title}-${r.token}`}>
               <span className="tokrow-sym">{r.symbol}</span>
               <span className="tokrow-val mono">

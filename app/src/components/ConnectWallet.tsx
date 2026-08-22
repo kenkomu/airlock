@@ -64,19 +64,25 @@ export function ConnectWallet({
        should not look identical to one that is ready. */
     const ok = conn.network !== undefined && conn.support.kind === 'ready';
     return (
-      <>
+      /* The panel is anchored to this button rather than floating in the middle
+         of the screen. It is about the account named on the pill, and a centred
+         modal breaks that link — you lose which thing you opened, and the page
+         behind goes dark for a panel that is only ever read, never filled in. */
+      <div className="addr-anchor">
         {/* Opens the account, rather than disconnecting. Clicking the thing you
             want to LOOK at should not destroy it — disconnect lives inside,
             where it is a deliberate choice instead of a misfire. */}
         <button
           type="button"
           className="addr-pill"
-          onClick={() => setAccountOpen(true)}
+          onClick={() => setAccountOpen((v) => !v)}
+          aria-expanded={accountOpen}
+          aria-haspopup="dialog"
           title={`${conn.address} — balances and details`}
         >
           <span className={`addr-dot${ok ? ' addr-dot-ok' : ' addr-dot-warn'}`} />
           <span className="mono">{short(conn.address)}</span>
-          <span className="addr-off">Details</span>
+          <span className={`addr-caret${accountOpen ? ' addr-caret-up' : ''}`} aria-hidden="true" />
         </button>
         {accountOpen && (
           <AccountSheet
@@ -89,7 +95,7 @@ export function ConnectWallet({
             }}
           />
         )}
-      </>
+      </div>
     );
   }
 
