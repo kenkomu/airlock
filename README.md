@@ -8,6 +8,14 @@ Built on the [STRK20](https://strk20-by-example.org/what-is-strk20) privacy pool
 
 ---
 
+![Splitting a withdrawal into standard note sizes, answered by the deployed mainnet contract](docs/img/split.png)
+
+Type an amount and the deployed mainnet contract answers. No wallet, no
+signature — `plan` is a view function, so the split you see is the split that
+would happen.
+
+---
+
 ## What runs today
 
 The honest answer to "can I use this". Deliberately placed before the design, so nobody has to read a plan to find out what is real.
@@ -48,7 +56,26 @@ The protocol's own documentation names rapid in-and-out sequences as a real weak
 
 So a two-minute round trip is **not** as private as the interface would like to imply. Airlock treats the dwell time between entering and leaving as part of the product rather than as latency: before you withdraw, it shows the current anonymity set and flags the timing and amount patterns that would make your two sides correlatable. A tool that lets you leave immediately while telling you it's private is worse than no tool.
 
+![The live anonymity panel: 135 deposits from 70 distinct addresses, with a per-token breakdown](docs/img/anonymity.png)
+
+Every figure there is counted in the browser from `starknet_getEvents` against
+the mainnet pool. Reload it and the numbers move, because the pool does.
+
+**The second column is the part no other privacy tool shows.** Everyone
+publishes the *size* of an anonymity set; size cannot tell you whether 135
+deposits are 70 people or one bot with 135 wallets, and those are very different
+places to hide. Airlock resolves the sender of every deposit in the window and
+reports the concentration — 70 distinct addresses, the busiest holding 4%, 28
+that deposited once and never again.
+
 The panel is also honest about its own limits. It counts a recent window rather than lifetime totals — a lifetime figure flatters the pool, because what protects you is the crowd sharing your *time window* and your *token*. Deposits of tokens it cannot name are counted and shown as `Other` rather than dropped, so the rows always add up to the headline.
+
+![The privacy report: a Linkable verdict, with amount, timing and crowd assessed separately](docs/img/report.png)
+
+The verdict is the worst factor, never an average — a perfect amount does not
+rescue a two-minute round trip, and neither survives an empty pool. That rule
+has [its own test suite](app/src/lib/__tests__/exposure.test.ts), including a
+sweep asserting nothing is ever reported as sealed while any factor leaks.
 
 ## The problem
 

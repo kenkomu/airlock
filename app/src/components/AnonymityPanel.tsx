@@ -8,7 +8,7 @@
  * needs this *before* they deposit, not after.
  */
 
-import type { AnonymitySnapshot } from '../lib/pool';
+import type { AnonymitySnapshot, Concentration } from '../lib/pool';
 import { TokenMark } from './Marks';
 import type { AnonymityState } from '../hooks/useAnonymitySet';
 
@@ -45,12 +45,12 @@ export function AnonymityPanel({ state }: { state: AnonymityState }) {
         </div>
       )}
 
-      {state.phase === 'ready' && <Ready snap={state.snap} />}
+      {state.phase === 'ready' && <Ready snap={state.snap} crowd={state.crowd} />}
     </section>
   );
 }
 
-function Ready({ snap }: { snap: AnonymitySnapshot }) {
+function Ready({ snap, crowd }: { snap: AnonymitySnapshot; crowd: Concentration | null }) {
   const days = Math.max(
     1,
     Math.round((snap.headBlock - snap.fromBlock) / BLOCKS_PER_DAY),
@@ -79,7 +79,48 @@ function Ready({ snap }: { snap: AnonymitySnapshot }) {
             <Metric k="Registered keys" v={snap.registrations.toLocaleString()} />
             <Metric k="Pool transactions" v={snap.uniqueTxs.toLocaleString()} />
           </div>
+
+        {/* Whether the crowd is real.
+          
+            Every privacy tool publishes the SIZE of its anonymity set. None of
+            them answer the question that size cannot: are those 135 deposits 69
+            people, or one bot with 135 wallets? Those are very different places
+            to hide, and the difference is invisible until someone counts.
+          
+            Absent rather than guessed when the scan has not finished — an
+            unanswered question should look unanswered. */}
+        {crowd && crowd.unique > 0 && (
+          <div className="crowdq">
+            <div className="crowdq-lead">
+              <strong className="mono">{crowd.unique.toLocaleString()}</strong> distinct
+              addresses behind{' '}
+              {crowd.sampled < crowd.total ? (
+                <>
+                  {crowd.sampled.toLocaleString()} of {crowd.total.toLocaleString()} deposits
+                </>
+              ) : (
+                <>those {crowd.total.toLocaleString()} deposits</>
+              )}
+            </div>
+            <div className="crowdq-facts">
+              <span>
+                Busiest address holds{' '}
+                <strong className="mono">{Math.round(crowd.topShare * 100)}%</strong>
+              </span>
+              <span>
+                <strong className="mono">{crowd.onceOnly.toLocaleString()}</strong> deposited once
+                and never again
+              </span>
+            </div>
+            <p className="muted sm">
+              A crowd of one person with many wallets is not a crowd. Counted from
+              the sender of every deposit in the window, in your browser.
+              {crowd.sampled < crowd.total && ' Some senders could not be read, so this covers the ones that could.'}
+            </p>
+          </div>
+        )}
         </div>
+
 
       {(snap.byToken.length > 0 || snap.unidentified > 0) && (
         <div className="tokens">

@@ -2387,3 +2387,35 @@ body {
   gap: var(--s2) var(--s4);
   align-items: center;
 }
+
+/* ---------- crowd quality ----------
+   The claim no other privacy tool makes. Size tells you how many deposits are
+   in the window; this tells you whether they are many people or one, which is
+   the difference between a crowd and a costume. */
+.crowdq {
+  /* Inside .anon-lead, directly under the headline it qualifies. As a sibling
+     it became the grid's second child and pushed the token breakdown out of the
+     right-hand column entirely. */
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+  padding-top: var(--s4);
+  margin-top: var(--s2);
+  border-top: 1px solid var(--border-soft);
+}
+.crowdq-lead {
+  font-size: 0.98rem;
+  color: var(--text);
+}
+.crowdq-lead strong,
+.crowdq-facts strong {
+  color: var(--accent);
+  font-weight: 600;
+}
+.crowdq-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2) var(--s5);
+  font-size: 0.88rem;
+  color: var(--text-2);
+}

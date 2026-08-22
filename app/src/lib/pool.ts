@@ -115,6 +115,8 @@ export interface AnonymitySnapshot {
   /* True when pagination was cut short — the numbers are then a floor, not a
      count, and the UI must say so rather than round it into a claim. */
   truncated: boolean;
+  /* Transaction hashes carrying a deposit, for the concentration scan. */
+  depositTxs: string[];
 }
 
 export async function getHeadBlock(): Promise<number> {
@@ -139,6 +141,9 @@ export interface Tally {
   perToken: Map<string, number>;
   /* Deposits whose token matched nothing in TOKENS. */
   unidentified: number;
+  /* Transaction hashes carrying a deposit, so the depositors behind them can be
+     counted later. Kept separate from `txs`, which is every pool transaction. */
+  depositTxs: string[];
 }
 
 export const emptyTally = (): Tally => ({
@@ -148,6 +153,7 @@ export const emptyTally = (): Tally => ({
   txs: new Set(),
   perToken: new Map(),
   unidentified: 0,
+  depositTxs: [],
 });
 
 /* Fold one page of pool events into a running tally.
@@ -171,6 +177,7 @@ export function tallyEvents(events: PoolEvent[], acc: Tally): Tally {
     const sel = ev.keys?.[0];
     if (sel && asBig(sel) === asBig(EV_DEPOSIT)) {
       acc.deposits += 1;
+      acc.depositTxs.push(ev.transaction_hash);
       /* Deposit carries (user_addr, token, amount); find the token by matching
          any field against the known set rather than trusting a fixed index,
          since key/data packing differs by Cairo version. */
@@ -257,6 +264,84 @@ export async function scanAnonymitySet(opts?: {
     uniqueTxs: acc.txs.size,
     byToken,
     unidentified: acc.unidentified,
+    depositTxs: acc.depositTxs,
     truncated,
+  };
+}
+
+
+/* ---------- how concentrated is the crowd? ----------
+ *
+ * Size alone cannot tell you whether 135 deposits are 69 people or one bot with
+ * 135 wallets, and those are very different places to hide. Every privacy tool
+ * publishes the size; none of them answer this.
+ *
+ * It is a separate, slower pass on purpose. One request per deposit is far too
+ * much to put in front of the headline figures, so the panel renders those
+ * immediately and this arrives when it arrives. A crowd-quality row that never
+ * loads costs nothing; a blank panel for ten seconds costs everything.
+ */
+export interface Concentration {
+  /* Deposits we successfully resolved a sender for. Not always the whole
+     window: a public node drops requests, and reporting the ones we got is
+     better than reporting nothing or pretending we got them all. */
+  sampled: number;
+  /* Deposits in the window, whether or not we resolved them. */
+  total: number;
+  unique: number;
+  /* Share of sampled deposits made by the single busiest address, 0–1. */
+  topShare: number;
+  /* Addresses that appear exactly once. A high count is the strongest signal
+     that a crowd is many people rather than one. */
+  onceOnly: number;
+}
+
+/* Bounded because these are public endpoints and a burst of 135 parallel
+   requests is how you get rate-limited into a wrong answer. */
+const SENDER_CONCURRENCY = 6;
+
+export async function scanConcentration(
+  depositTxs: string[],
+  opts?: { signal?: { aborted: boolean } },
+): Promise<Concentration | null> {
+  const hashes = [...new Set(depositTxs)];
+  if (hashes.length === 0) return null;
+
+  const senders: bigint[] = [];
+  let cursor = 0;
+
+  const worker = async () => {
+    for (;;) {
+      if (opts?.signal?.aborted) return;
+      const i = cursor;
+      cursor += 1;
+      if (i >= hashes.length) return;
+      try {
+        const tx = await rpc<{ sender_address?: string; contract_address?: string }>(
+          'starknet_getTransactionByHash',
+          [hashes[i]],
+        );
+        const who = tx?.sender_address ?? tx?.contract_address;
+        const felt = who ? asBig(who) : null;
+        if (felt !== null) senders.push(felt);
+      } catch {
+        /* One unresolved deposit is a smaller sample, not a failure. */
+      }
+    }
+  };
+
+  await Promise.all(Array.from({ length: SENDER_CONCURRENCY }, worker));
+  if (opts?.signal?.aborted || senders.length === 0) return null;
+
+  const counts = new Map<bigint, number>();
+  for (const s of senders) counts.set(s, (counts.get(s) ?? 0) + 1);
+  const tallies = [...counts.values()];
+
+  return {
+    sampled: senders.length,
+    total: hashes.length,
+    unique: counts.size,
+    topShare: Math.max(...tallies) / senders.length,
+    onceOnly: tallies.filter((n) => n === 1).length,
   };
 }
