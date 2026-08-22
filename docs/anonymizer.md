@@ -164,3 +164,40 @@ closer to what a wallet actually sends anyway.
 `Span<ServerAction>`, and that translation is assumed rather than tested. One
 round trip through a real wallet closes it, and nothing above should be read as
 having closed it already.
+
+
+## Standard is not the same as common
+
+The ladder guarantees a withdrawal leaves as sizes the contract will also produce
+for other people. It does not guarantee that anyone else has actually used them.
+
+`OpenNoteDeposited` is a public pool event carrying each note's amount, so this
+is measurable rather than assumed. Counted over a recent window on mainnet, the
+STRK open notes were:
+
+| Rung | Open notes that size |
+|---|---|
+| 5 STRK | 6 |
+| 1 STRK | 5 |
+| 0.1 STRK | 4 |
+| 2.5 STRK | 1 |
+| 0.5 STRK | 1 |
+
+So an `8.4` split into `5 + 2.5 + 0.5 + 0.1x4` puts three of its seven notes on
+rungs where nothing else sits — the 2.5 and the 0.5 were, at that moment, the
+only notes of their size in the window. They are on the ladder and hiding among
+nobody.
+
+`6 -> 5 + 1` and `7 -> 5 + 1 + 1` land every leg on a populated rung instead.
+That is the difference between valid and private, and it is the reason
+[docs/mainnet-runs.md](mainnet-runs.md) chose those amounts over a `13`.
+
+The interface does not yet show these counts — it says "standard sizes, not
+necessarily common ones", which is what can honestly be claimed without them.
+Showing the per-rung population is the strongest remaining improvement to the
+split panel, and it is a measurement rather than a heuristic.
+
+**Caveat:** open notes only. Ordinary private notes emit encrypted amounts and
+cannot be counted without the viewing key. Open notes are the right comparison
+set — a note this contract creates is an open note — but the count is not "every
+note in the pool".

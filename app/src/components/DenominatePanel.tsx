@@ -515,7 +515,7 @@ function SplitBar({
             </span>
           );
         })}
-        <span className="splitkey-note">each a size other people also use</span>
+        <span className="splitkey-note">standard sizes, not necessarily common ones</span>
       </figcaption>
     </figure>
   );
