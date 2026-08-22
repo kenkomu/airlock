@@ -233,9 +233,7 @@ export function DenominatePanel({
       {preview && (
         <p className="lede-in">
           Withdrawing <strong>8.4</strong> tells everyone watching it was you —
-          nobody else moved that exact number. Split it into standard amounts and
-          each piece looks like everybody else's. <strong>Try it below</strong>;
-          the answer comes from the contract on mainnet, and nothing is signed.
+          nobody else moved that exact number. Try any amount.
         </p>
       )}
 
@@ -294,11 +292,6 @@ export function DenominatePanel({
         />
       </label>
 
-      <p className="muted sm">
-        Rungs: {[1000n, 500n, 250n, 100n, 50n, 25n, 10n, 5n, 1n]
-          .map((r) => format(r * bucketer.unit, bucketer).replace(` ${bucketer.symbol}`, ''))
-          .join(' · ')} {bucketer.symbol}
-      </p>
 
       {overBalance && (
         <p className="err">
@@ -309,23 +302,18 @@ export function DenominatePanel({
 
       {!overBalance && planError && <p className="err">{planError}</p>}
 
-      {legs && (
-        <div className="split">
-          <div className="split-l">
-            {/* The chain's answer, not ours. */}
-            {legs.length} note{legs.length === 1 ? '' : 's'}, read from the contract
-          </div>
-          <div className="split-row">
-            {legs.map((l, i) => (
-              <span className="leg" key={i}>{format(l, bucketer).replace(` ${bucketer.symbol}`, '')}</span>
-            ))}
-          </div>
-          <p className="split-note">
-            Each note can be spent in its own transaction later. That is the point — the
-            same amounts sent together in one transaction would be linked by it.
-          </p>
-        </div>
+      {legs && amount !== null && (
+        <SplitBar legs={legs} amount={amount} bucketer={bucketer} />
       )}
+
+      <p className="muted sm">
+        Standard sizes:{' '}
+        {[1000n, 500n, 250n, 100n, 50n, 25n, 10n, 5n, 1n]
+          .map((r) => format(r * bucketer.unit, bucketer).replace(` ${bucketer.symbol}`, ''))
+          .join(' · ')}{' '}
+        {bucketer.symbol}. Anything that is not an exact sum of these is refused
+        rather than rounded.
+      </p>
 
       {/* The bill, named in the same voice as the leaks. Everything else in this
           panel tells you what a privacy step costs your anonymity; this tells
@@ -425,4 +413,92 @@ function StageLine({
     case 'failed':
       return <p className={stage.recoverable ? 'err' : 'notice notice-leak'}>{stage.message}</p>;
   }
+}
+
+
+/* ---------- the split, drawn ----------
+ *
+ * This was a row of identically-sized pills. 5 and 0.1 differ by fifty times and
+ * rendered the same width, which threw away the one thing the picture is for —
+ * and three paragraphs of prose underneath were doing the explaining instead.
+ *
+ * Two bars, because the comparison IS the argument: one distinctive amount above,
+ * the same value as ordinary sizes below. Nobody needs that sentence written out
+ * once they can see it.
+ *
+ * Sequential rather than categorical colour, deliberately. Categorical hues would
+ * paint the four 0.1 notes as four different things when the whole point is that
+ * they are indistinguishable — from each other and from everyone else's. One hue,
+ * bigger is stronger, and identical rungs render identically.
+ */
+function SplitBar({
+  legs,
+  amount,
+  bucketer,
+}: {
+  legs: bigint[];
+  amount: bigint;
+  bucketer: Bucketer;
+}) {
+  const moved = legs.reduce((a, b) => a + b, 0n);
+  if (moved === 0n) return null;
+
+  const num = (v: bigint) => format(v, bucketer).replace(` ${bucketer.symbol}`, '');
+
+  /* Distinct rungs, largest first — the shade index, and the summary below. */
+  const rungs = [...new Set(legs.map(String))]
+    .map((v) => BigInt(v))
+    .sort((a, b) => (b > a ? 1 : b < a ? -1 : 0));
+  const shadeOf = (leg: bigint) =>
+    rungs.length < 2 ? 0 : Math.round((rungs.findIndex((r) => r === leg) / (rungs.length - 1)) * 3);
+
+  return (
+    <figure className="splitfig">
+      <div className="splitfig-row">
+        <span className="splitfig-k">You withdraw</span>
+        <div className="splitbar">
+          <div className="splitseg splitseg-solo" style={{ width: '100%' }} />
+        </div>
+        <span className="splitfig-v mono">
+          {num(amount)} {bucketer.symbol}
+        </span>
+      </div>
+
+      <div className="splitfig-row">
+        <span className="splitfig-k">Anyone watching sees</span>
+        <div className="splitbar">
+          {legs.map((l, i) => (
+            <div
+              key={i}
+              className={`splitseg splitseg-${shadeOf(l)}`}
+              /* Proportional to value, with a floor so a 0.1 beside a 1000 stays
+                 visible rather than collapsing to nothing. */
+              style={{ flex: `${Number((l * 10000n) / moved)} 0 3px` }}
+              title={`${num(l)} ${bucketer.symbol}`}
+            />
+          ))}
+        </div>
+        <span className="splitfig-v mono">
+          {legs.length} note{legs.length === 1 ? '' : 's'}
+        </span>
+      </div>
+
+      {/* The values, once, grouped — not a label on every segment. Four 0.1s are
+          one fact, and the grouping is also what the privacy report reads: it is
+          the count of DISTINCT sizes that makes a combination a pattern. */}
+      <figcaption className="splitfig-cap">
+        {rungs.map((r) => {
+          const n = legs.filter((l) => l === r).length;
+          return (
+            <span className="splitkey" key={String(r)}>
+              <i className={`splitkey-sw splitseg-${shadeOf(r)}`} aria-hidden="true" />
+              {num(r)}
+              {n > 1 && <span className="splitkey-x">&times;{n}</span>}
+            </span>
+          );
+        })}
+        <span className="splitkey-note">each a size other people also use</span>
+      </figcaption>
+    </figure>
+  );
 }

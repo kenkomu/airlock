@@ -2419,3 +2419,98 @@ body {
   font-size: 0.88rem;
   color: var(--text-2);
 }
+
+/* ---------- the split figure ----------
+   Two bars: one distinctive amount, then the same value as ordinary sizes. The
+   comparison is the argument, so it is drawn rather than described.
+
+   Sequential ramp, not categorical. Categorical hues would paint four 0.1 notes
+   as four different things, when the entire point is that they are
+   indistinguishable — from each other and from everyone else's. */
+.splitfig {
+  margin: var(--s4) 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s3);
+}
+.splitfig-row {
+  display: grid;
+  grid-template-columns: minmax(0, 8rem) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--s3);
+}
+.splitfig-k {
+  font-size: 0.75rem;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.splitfig-v {
+  font-size: 0.86rem;
+  color: var(--text-2);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.splitbar {
+  display: flex;
+  /* The gap IS the separator — a 2px band of surface between segments, never a
+     stroke drawn around them. */
+  gap: 2px;
+  height: 22px;
+  min-width: 0;
+}
+.splitseg {
+  min-width: 0;
+  border-radius: 2px;
+  background: var(--seg-2);
+}
+/* One hue, four steps. Bigger denomination reads stronger. */
+.splitseg-0 { background: var(--seg-3); }
+.splitseg-1 { background: var(--seg-2); }
+.splitseg-2 { background: var(--seg-1); }
+.splitseg-3 { background: var(--seg-0); }
+/* The unsplit amount: one undivided block, the thing being argued against. */
+.splitseg-solo {
+  background: var(--seg-solo);
+  flex: 1;
+}
+
+.splitfig-cap {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s2) var(--s4);
+  margin: 0;
+  font-size: 0.86rem;
+  color: var(--text-2);
+  font-family: var(--mono);
+}
+.splitkey {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.splitkey-sw {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  flex: none;
+}
+.splitkey-x {
+  color: var(--text-3);
+}
+.splitkey-note {
+  font-family: var(--sans);
+  color: var(--text-3);
+  font-size: 0.82rem;
+}
+
+@media (max-width: 560px) {
+  /* The label stacks above the bar rather than squeezing it to nothing. */
+  .splitfig-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .splitfig-k {
+    grid-column: 1 / -1;
+  }
+}

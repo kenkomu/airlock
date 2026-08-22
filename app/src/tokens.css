@@ -54,6 +54,16 @@
   --surface-4: #27333f;
   --border-hi: #2d3c4c;
 
+  /* Sequential ramp for the split figure: one hue, four steps, strongest first.
+     Drawn from the accent so the figure reads as part of the live path. The
+     `solo` step is the un-split amount — the same hue, flatter, because it is
+     the state being argued against rather than a fifth category. */
+  --seg-0: #1b7a8d; /* 3.56:1 */
+  --seg-1: #229bb3; /* 5.43:1 */
+  --seg-2: #2ebbd7; /* 7.81:1 */
+  --seg-3: #87d8e8; /* 11.03:1 — every step clears 3:1 on the card surface */
+  --seg-solo: #445a6a;
+
   /* Ink on a filled semantic colour. These do NOT flip with the theme: the
      fills stay saturated in both, so the readable ink on them stays dark. */
   --on-accent: #04191d;
@@ -126,7 +136,22 @@
     --accent-wash: #e2f1f4;
     --accent-hi: #0a6a7c;
   --accent-fill: #2ab3cc; /* 7.25:1 with --on-accent */
+  --seg-0: #084652; /* 10.48:1 */
+  --seg-1: #0c6678; /* 6.57:1 */
+  --seg-2: #0f849b; /* 4.37:1 */
+  --seg-3: #13a0bc; /* 3.09:1 */
+  --seg-solo: #8d9dab;
     --accent-fill: #2ab3cc; /* 7.25:1 with --on-accent */
+  --seg-0: #084652; /* 10.48:1 */
+  --seg-1: #0c6678; /* 6.57:1 */
+  --seg-2: #0f849b; /* 4.37:1 */
+  --seg-3: #13a0bc; /* 3.09:1 */
+  --seg-solo: #8d9dab;
+    --seg-0: #084652; /* 10.48:1 */
+    --seg-1: #0c6678; /* 6.57:1 */
+    --seg-2: #0f849b; /* 4.37:1 */
+    --seg-3: #13a0bc; /* 3.09:1 */
+    --seg-solo: #8d9dab;
     --accent-grad-a: #2ab3cc;
     --accent-grad-b: #0d7d92;
     --accent-grad-a-hi: #21a3bb;
@@ -165,6 +190,11 @@
   --accent-wash: #e2f1f4;
   --accent-hi: #0a6a7c;
   --accent-fill: #2ab3cc; /* 7.25:1 with --on-accent */
+  --seg-0: #084652; /* 10.48:1 */
+  --seg-1: #0c6678; /* 6.57:1 */
+  --seg-2: #0f849b; /* 4.37:1 */
+  --seg-3: #13a0bc; /* 3.09:1 */
+  --seg-solo: #8d9dab;
   --accent-grad-a: #2ab3cc;
   --accent-grad-b: #0d7d92;
   --accent-grad-a-hi: #21a3bb;

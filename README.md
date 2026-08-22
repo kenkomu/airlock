@@ -8,7 +8,7 @@ Built on the [STRK20](https://strk20-by-example.org/what-is-strk20) privacy pool
 
 ---
 
-![Splitting a withdrawal into standard note sizes, answered by the deployed mainnet contract](docs/img/split.png)
+![One distinctive amount of 8.4 STRK shown as a single bar, and the same value below as seven proportional standard-size notes](docs/img/split.png)
 
 Type an amount and the deployed mainnet contract answers. No wallet, no
 signature — `plan` is a view function, so the split you see is the split that
