@@ -34,6 +34,11 @@ export default function App() {
   /* One scan, shared by the report's crowd factor and the anonymity panel. */
   const anon = useAnonymitySet();
   const deposits = anon.phase === 'ready' ? anon.snap.deposits : null;
+  /* The same scan answers "how big is the crowd" and "how common is this note
+     size", so the split panel reads it from here rather than fetching its own.
+     Two scans would be twice the RPC load and — worse — could disagree on one
+     screen. */
+  const sizes = anon.phase === 'ready' ? anon.snap.sizes : null;
 
   const report = useMemo(
     () =>
@@ -86,7 +91,11 @@ export default function App() {
             two-line strip above it. Anyone skimming concluded the opposite of
             the truth about what works. */}
         <Boundary name="Denominate">
-          <DenominatePanel session={session} onConnect={() => setPickerOpen(true)} />
+          <DenominatePanel
+            session={session}
+            onConnect={() => setPickerOpen(true)}
+            sizes={sizes}
+          />
         </Boundary>
 
         <Boundary name="Anonymity set">

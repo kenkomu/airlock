@@ -2477,18 +2477,43 @@ body {
 
 .splitfig-cap {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--s2) var(--s4);
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--s2);
   margin: 0;
   font-size: 0.86rem;
   color: var(--text-2);
   font-family: var(--mono);
 }
+.splitkeys {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s2) var(--s4);
+}
 .splitkey {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+}
+/* How many people use this size. A pill rather than more prose, because it has
+   to sit beside the number it qualifies and be readable at a glance — the
+   comparison across rungs is the point, and prose destroys a comparison. */
+.splitkey-c {
+  font-family: var(--sans);
+  font-size: 0.74rem;
+  color: var(--text-3);
+  background: var(--surface-2);
+  border-radius: 99px;
+  padding: 1px 7px;
+  white-space: nowrap;
+}
+/* The case worth colouring: a size at most one address is using. Everything
+   else in this app treats a leak as amber, and a leg standing alone is exactly
+   that — including when the one address is the reader's own. */
+.splitkey-c-thin {
+  color: var(--leak);
+  background: var(--leak-wash);
 }
 .splitkey-sw {
   width: 10px;
@@ -2503,6 +2528,17 @@ body {
   font-family: var(--sans);
   color: var(--text-3);
   font-size: 0.82rem;
+  line-height: 1.45;
+}
+.splitkey-note b {
+  color: var(--text-2);
+  font-weight: 600;
+}
+.splitkey-note-warn {
+  color: var(--leak);
+}
+.splitkey-note-warn b {
+  color: var(--leak);
 }
 
 @media (max-width: 560px) {

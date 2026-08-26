@@ -30,11 +30,12 @@ The honest answer to "can I use this". Deliberately placed before the design, so
 | ✅ | Anonymity-set and timing disclosure, read live from the mainnet pool — no wallet required |
 | ✅ | Connect a privacy-enabled Starknet wallet and read a shielded balance (`WalletAccountV6`, `strk20Balances`) |
 | ✅ | Split a shielded balance into standard note sizes, with the split read from the contract rather than computed in the client |
+| ✅ | **Per-rung crowd measurement** — how many people have actually used each note size, counted live from the pool's own events, with the rarest leg named ([docs/anonymizer.md](docs/anonymizer.md)) |
 | ✅ | **Four real mainnet round trips** through the anonymizer — amounts, splits, fees and verification in [docs/mainnet-runs.md](docs/mainnet-runs.md) |
 | ⬜ | Bridge in over CCTP, and withdraw to a different chain |
 | ⬜ | Starknet account derived deterministically from an EVM signature; sponsored registration |
 
-**49 Cairo tests** (39 offline, 10 against a forked chain) and **59 TypeScript tests**, run on every push.
+**49 Cairo tests** (39 offline, 10 against a forked chain) and **100 TypeScript tests**, run on every push.
 
 ## What is and isn't private
 

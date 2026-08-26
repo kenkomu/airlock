@@ -171,33 +171,69 @@ having closed it already.
 The ladder guarantees a withdrawal leaves as sizes the contract will also produce
 for other people. It does not guarantee that anyone else has actually used them.
 
-`OpenNoteDeposited` is a public pool event carrying each note's amount, so this
-is measurable rather than assumed. Counted over a recent window on mainnet, the
-STRK open notes were:
+Two public pool events carry amounts, so this is measurable rather than
+assumed:
 
-| Rung | Open notes that size |
-|---|---|
-| 5 STRK | 6 |
-| 1 STRK | 5 |
-| 0.1 STRK | 4 |
-| 2.5 STRK | 1 |
-| 0.5 STRK | 1 |
+| Event | Layout on mainnet | What it is |
+|---|---|---|
+| `Deposit` | `keys = [selector, user, token]`, `data = [amount]` | money entering the pool from outside |
+| `OpenNoteDeposited` | `keys = [selector, depositor, token, note_id]`, `data = [amount]` | a note an anonymizer created |
 
-So an `8.4` split into `5 + 2.5 + 0.5 + 0.1x4` puts three of its seven notes on
-rungs where nothing else sits — the 2.5 and the 0.5 were, at that moment, the
-only notes of their size in the window. They are on the ladder and hiding among
-nobody.
+They are disjoint. This project's own `8.4` split
+([`0x03f52e1b…3a50`](https://voyager.online/tx/0x03f52e1bddd716344f5dd3c43ba2b81eb1aefb0bc7791aba3e54051b40963a50))
+emits seven `OpenNoteDeposited` and no `Deposit`, so counting both into one
+histogram double-counts nothing.
 
-`6 -> 5 + 1` and `7 -> 5 + 1 + 1` land every leg on a populated rung instead.
-That is the difference between valid and private, and it is the reason
-[docs/mainnet-runs.md](mainnet-runs.md) chose those amounts over a `13`.
+Counted over a 200,000-block window on mainnet, the busiest STRK sizes were:
 
-The interface does not yet show these counts — it says "standard sizes, not
-necessarily common ones", which is what can honestly be claimed without them.
-Showing the per-rung population is the strongest remaining improvement to the
-split panel, and it is a measurement rather than a heuristic.
+| Size | Notes | Addresses behind them |
+|---|---|---|
+| 1 STRK | 20 | 10 |
+| 10 STRK | 15 | 7 |
+| 6 STRK | 14 | 14 |
+| 5 STRK | 11 | 3 |
+| 7 STRK | 7 | 7 |
+| 0.1 STRK | 7 | 3 |
+| 250 STRK | 0 | 0 |
 
-**Caveat:** open notes only. Ordinary private notes emit encrypted amounts and
-cannot be counted without the viewing key. Open notes are the right comparison
-set — a note this contract creates is an open note — but the count is not "every
-note in the pool".
+**The two columns are the whole point.** 5 STRK looks like the fourth-busiest
+size in the pool and is the work of three addresses; 6 STRK has fewer notes and
+fourteen separate people behind them. A count of notes would have reported the
+first as the better place to hide. Counting distinct depositors is free — the
+address is already a key on both events — and it is the difference between a
+crowd and a costume.
+
+The long tail is every amount with exactly one note from exactly one address:
+`4000.144894 STRK`, `2542.017695 USDC`, `73670.661945 USDC`. Those are the
+fingerprints this contract exists to prevent, and there are more of them than
+of everything else combined.
+
+## What the interface does with this
+
+The split panel counts it live and prints it per rung, then states a verdict on
+the *rarest* leg — because a plan is exactly as private as its thinnest rung,
+which is the same reasoning `planBuckets` uses to refuse a scattered split.
+Averaging across legs would let a well-populated `1` hide the fact that the
+`2.5` beside it is unique, and the unique one is what an observer keys on.
+
+Typing `8.4` today gets `5` (3 people), `2.5` (1), `0.5` (1), `0.1x4` (3) and
+the line *"Rarest size here is 2.5 STRK, used by 1 person — standard, but not
+yet a crowd."* Typing `6` gets `5 + 1` and the panel declines to call it a
+giveaway at all, because thirteen addresses have moved exactly 6.
+
+Wording is deliberate: **"addresses" and "people", never "others".** The
+histogram counts depositors and one of them may be the person reading the
+screen, so "someone else" would quietly add one to the crowd.
+
+Truncation runs one way on purpose. The snapshot keeps the 400 commonest sizes
+so a busy pool cannot grow the cached blob without bound; a size the histogram
+has forgotten therefore reports zero rather than one. The crowd is understated,
+never overstated — the only direction this number is allowed to be wrong in.
+
+**Caveat, narrower than it used to be.** An earlier version of this file said
+only open notes could be counted. That was wrong: the pool's `Deposit` event
+publishes `(user, token, amount)` in the clear, so notes created by deposit are
+countable too, and they are the majority of the join set. What genuinely cannot
+be counted is note-to-note transfers inside the pool, whose amounts and parties
+are private. So the histogram covers every note that entered the pool from
+outside or was created by an anonymizer — not every note in existence.

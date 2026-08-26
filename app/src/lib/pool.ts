@@ -17,6 +17,12 @@ export const EV_VIEWING_KEY_SET =
   '0x1321a492485b4f19851fb787ab3800a0030b595332cba93cd5fe40dfb5a4daf';
 export const EV_DEPOSIT =
   '0x9149d2123147c5f43d258257fef0b7b969db78269369ebcf5ebb9eef8592f2';
+/* Emitted once per note an anonymizer contract creates — including every leg
+   this project's own splits produce. Confirmed against the mainnet pool's live
+   event stream, where its layout is
+   `keys = [selector, depositor, token, note_id]`, `data = [amount]`. */
+export const EV_OPEN_NOTE =
+  '0x25b6da03c4858d11cb0708d5cb6be79b190fb32eb7a7ce83804e07cbbb9bead';
 
 export const TOKENS: Record<string, { symbol: string; decimals: number }> = {
   '0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d': {
@@ -110,6 +116,25 @@ export interface PoolEvent {
   transaction_hash: string;
 }
 
+/* How many notes of one exact size exist in the window, and how many different
+ * people made them.
+ *
+ * `people` is the number that matters and the reason this is not just a count.
+ * Four notes of 5 STRK are not a crowd if one address created all four — which
+ * is exactly what this project's own splits look like from outside. Counting
+ * distinct depositors is free here (the address is already a key on both
+ * events) and it is the difference between a crowd and a costume.
+ */
+export interface SizeCount {
+  symbol: string;
+  /* Raw base units as a decimal string. bigint does not survive JSON and this
+     snapshot is written to localStorage, so the wire form is a string and the
+     comparison is done on strings too — no float ever touches an amount. */
+  amount: string;
+  notes: number;
+  people: number;
+}
+
 export interface AnonymitySnapshot {
   /* Window actually scanned, in blocks. */
   fromBlock: number;
@@ -131,6 +156,10 @@ export interface AnonymitySnapshot {
   truncated: boolean;
   /* Transaction hashes carrying a deposit, for the concentration scan. */
   depositTxs: string[];
+  /* Every note size seen in the window, commonest first. Capped — see
+     `MAX_SIZES` — so a busy pool cannot grow the cached snapshot without
+     bound. */
+  sizes: SizeCount[];
 }
 
 export async function getHeadBlock(): Promise<number> {
@@ -158,6 +187,8 @@ export interface Tally {
   /* Transaction hashes carrying a deposit, so the depositors behind them can be
      counted later. Kept separate from `txs`, which is every pool transaction. */
   depositTxs: string[];
+  /* `symbol:amount` -> how many notes that size, and who made them. */
+  sizes: Map<string, { notes: number; people: Set<string> }>;
 }
 
 export const emptyTally = (): Tally => ({
@@ -168,6 +199,7 @@ export const emptyTally = (): Tally => ({
   perToken: new Map(),
   unidentified: 0,
   depositTxs: [],
+  sizes: new Map(),
 });
 
 /* Fold one page of pool events into a running tally.
@@ -184,12 +216,59 @@ export const emptyTally = (): Tally => ({
  * a user depositing an unlisted token would see no row for it and therefore no
  * thin-crowd warning, which is exactly when the warning matters most.
  */
+/* The exact layout both amount-carrying events use on mainnet:
+ *   Deposit           keys = [selector, user,      token]             data = [amount]
+ *   OpenNoteDeposited keys = [selector, depositor, token, note_id]    data = [amount]
+ *
+ * Deliberately strict, where `tallyEvents` is deliberately permissive about
+ * where the token sits. The permissive search exists so a Cairo version change
+ * cannot make deposits vanish from the count — undercounting the crowd is the
+ * failure to avoid there. Here the risk runs the other way: guessing which
+ * field is the amount could publish a wrong size and tell someone they are
+ * hiding among people who do not exist. So this returns null unless the event
+ * is exactly the shape we have verified, and a layout change costs us the
+ * histogram rather than a false one.
+ */
+function noteSize(ev: PoolEvent): { symbol: string; amount: string; who: string } | null {
+  const keys = ev.keys ?? [];
+  const data = ev.data ?? [];
+  if (keys.length < 3 || data.length !== 1) return null;
+
+  const tokenField = asBig(keys[2]);
+  if (tokenField === null) return null;
+  const hit = TOKEN_KEYS.find(([, big]) => big === tokenField);
+  if (!hit) return null;
+
+  const amount = asBig(data[0]);
+  const who = asBig(keys[1]);
+  if (amount === null || amount <= 0n || who === null) return null;
+
+  return { symbol: TOKENS[hit[0]].symbol, amount: amount.toString(), who: who.toString() };
+}
+
+function recordSize(acc: Tally, ev: PoolEvent): void {
+  const size = noteSize(ev);
+  if (!size) return;
+  const key = `${size.symbol}:${size.amount}`;
+  const bucket = acc.sizes.get(key) ?? { notes: 0, people: new Set<string>() };
+  bucket.notes += 1;
+  bucket.people.add(size.who);
+  acc.sizes.set(key, bucket);
+}
+
 export function tallyEvents(events: PoolEvent[], acc: Tally): Tally {
   for (const ev of events) {
     acc.totalEvents += 1;
     acc.txs.add(ev.transaction_hash);
     const sel = ev.keys?.[0];
-    if (sel && asBig(sel) === asBig(EV_DEPOSIT)) {
+    if (sel && asBig(sel) === asBig(EV_OPEN_NOTE)) {
+      /* A note an anonymizer created, not money entering the pool. Verified on
+         mainnet that the two are disjoint — this project's own 8.4 split emits
+         seven OpenNoteDeposited and no Deposit — so counting both into the
+         histogram double-counts nothing, and counting this one as a deposit
+         would inflate the anonymity headline. It does neither. */
+      recordSize(acc, ev);
+    } else if (sel && asBig(sel) === asBig(EV_DEPOSIT)) {
       acc.deposits += 1;
       acc.depositTxs.push(ev.transaction_hash);
       /* Deposit carries (user_addr, token, amount); find the token by matching
@@ -208,6 +287,7 @@ export function tallyEvents(events: PoolEvent[], acc: Tally): Tally {
         }
       }
       if (!named) acc.unidentified += 1;
+      recordSize(acc, ev);
     } else if (sel && asBig(sel) === asBig(EV_VIEWING_KEY_SET)) {
       acc.registrations += 1;
     }
@@ -222,6 +302,15 @@ export function tallyEvents(events: PoolEvent[], acc: Tally): Tally {
  * recent count is both the smaller number and the honest one. `maxPages` caps
  * the work so a browser tab cannot hang on a busy pool — and when the cap is
  * hit we report `truncated` instead of a confident wrong number. */
+/* Sizes kept in the snapshot, commonest first.
+ *
+ * The snapshot goes into localStorage, so it needs a bound the pool cannot
+ * outgrow. Truncation drops the rarest sizes, which means a size the histogram
+ * has forgotten reports zero rather than one — the crowd is understated, never
+ * overstated. That is the only direction this number is allowed to be wrong in.
+ */
+const MAX_SIZES = 400;
+
 export async function scanAnonymitySet(opts?: {
   pool?: string;
   windowBlocks?: number;
@@ -269,6 +358,19 @@ export async function scanAnonymitySet(opts?: {
     .map(([symbol, n]) => ({ symbol, deposits: n }))
     .sort((a, b) => b.deposits - a.deposits);
 
+  const sizes: SizeCount[] = [...acc.sizes.entries()]
+    .map(([key, v]) => {
+      const cut = key.indexOf(':');
+      return {
+        symbol: key.slice(0, cut),
+        amount: key.slice(cut + 1),
+        notes: v.notes,
+        people: v.people.size,
+      };
+    })
+    .sort((a, b) => b.notes - a.notes || b.people - a.people)
+    .slice(0, MAX_SIZES);
+
   return {
     fromBlock,
     headBlock,
@@ -279,8 +381,29 @@ export async function scanAnonymitySet(opts?: {
     byToken,
     unidentified: acc.unidentified,
     depositTxs: acc.depositTxs,
+    sizes,
     truncated,
   };
+}
+
+/* How crowded one exact note size is.
+ *
+ * Absent means nobody in the window used that size, which is an answer rather
+ * than a gap — so this returns zeros instead of null and callers never have to
+ * decide what a missing histogram entry means. `people` counts the depositor
+ * addresses behind those notes, so a size only this project has ever used comes
+ * back as one person however many notes it has.
+ */
+export function crowdAt(sizes: SizeCount[], symbol: string, amount: bigint): SizeCount {
+  const want = amount.toString();
+  return (
+    sizes.find((s) => s.symbol === symbol && s.amount === want) ?? {
+      symbol,
+      amount: want,
+      notes: 0,
+      people: 0,
+    }
+  );
 }
 
 

@@ -14,6 +14,7 @@ import { denominate, format, type Stage } from '../lib/denominate';
 import { NETWORKS, SN_MAIN, bucketerFor, contractUrl, txUrl, type Bucketer, type Network } from '../lib/networks';
 import { providerFor } from '../lib/wallet';
 import { recordSplit } from '../lib/history';
+import { crowdAt, type SizeCount } from '../lib/pool';
 
 /* Measured, not estimated. On the first mainnet split
    (0x03f52e1bddd716344f5dd3c43ba2b81eb1aefb0bc7791aba3e54051b40963a50) the
@@ -56,9 +57,15 @@ const MAINNET = NETWORKS.find((n) => n.chainId === SN_MAIN)!;
 export function DenominatePanel({
   session,
   onConnect,
+  sizes,
 }: {
   session: WalletSession;
   onConnect: () => void;
+  /* Note sizes counted live from the pool, or null while the scan is in
+     flight. Passed down rather than fetched here: the anonymity panel already
+     pays for this scan, and two components asking separately could show two
+     different crowds on one screen. */
+  sizes: SizeCount[] | null;
 }) {
   const conn = session.state.phase === 'connected' ? session.state.conn : null;
   /* Fall back to mainnet so the panel is usable unconnected. */
@@ -237,10 +244,7 @@ export function DenominatePanel({
           needs to know what problem this solves before a word like
           "denomination" can mean anything to them. */}
       {preview && (
-        <p className="lede-in">
-          Withdrawing <strong>8.4</strong> tells everyone watching it was you —
-          nobody else moved that exact number. Try any amount.
-        </p>
+        <AmountLede text={text} amount={amount} bucketer={bucketer} sizes={sizes} />
       )}
 
       {network.bucketers.length > 1 && (
@@ -309,7 +313,7 @@ export function DenominatePanel({
       {!overBalance && planError && <p className="err">{planError}</p>}
 
       {legs && amount !== null && (
-        <SplitBar legs={legs} amount={amount} bucketer={bucketer} />
+        <SplitBar legs={legs} amount={amount} bucketer={bucketer} sizes={sizes} />
       )}
 
       <p className="muted sm">
@@ -434,6 +438,58 @@ function StageLine({
 }
 
 
+/* The opening claim, measured rather than asserted.
+ *
+ * This was a fixed sentence about 8.4 sitting above an input the reader had
+ * often already changed, so the first line of the panel could be arguing about
+ * a number that was no longer on screen. It now reads the same histogram the
+ * figure below does — and says the opposite thing when the opposite thing is
+ * true. An amount fourteen people moved last week is not a giveaway, and
+ * insisting it is would be exactly the overclaiming this panel exists to refuse.
+ *
+ * "address", never "someone else": the histogram counts depositors and one of
+ * them may well be the reader, so anything phrased as "others" would quietly
+ * add one to the crowd.
+ */
+function AmountLede({
+  text,
+  amount,
+  bucketer,
+  sizes,
+}: {
+  text: string;
+  amount: bigint | null;
+  bucketer: Bucketer;
+  sizes: SizeCount[] | null;
+}) {
+  const shown = text.trim() || '8.4';
+  const crowd =
+    amount !== null && amount > 0n && sizes
+      ? crowdAt(sizes, bucketer.symbol, amount)
+      : null;
+
+  if (crowd && crowd.people >= 2)
+    return (
+      <p className="lede-in">
+        <strong>{crowd.people} different addresses</strong> have already moved
+        exactly {shown} {bucketer.symbol} — so this one is not a giveaway. Most
+        amounts are: change a digit and watch.
+      </p>
+    );
+
+  return (
+    <p className="lede-in">
+      Withdrawing <strong>{shown}</strong> tells everyone watching it was you —{' '}
+      {crowd === null
+        ? 'nobody else moved that exact number'
+        : crowd.people === 0
+          ? 'nobody in the pool has moved that exact amount recently'
+          : 'just one address in the pool has moved it'}
+      . Try any amount.
+    </p>
+  );
+}
+
 /* ---------- the split, drawn ----------
  *
  * This was a row of identically-sized pills. 5 and 0.1 differ by fifty times and
@@ -453,10 +509,12 @@ function SplitBar({
   legs,
   amount,
   bucketer,
+  sizes,
 }: {
   legs: bigint[];
   amount: bigint;
   bucketer: Bucketer;
+  sizes: SizeCount[] | null;
 }) {
   const moved = legs.reduce((a, b) => a + b, 0n);
   if (moved === 0n) return null;
@@ -469,6 +527,12 @@ function SplitBar({
     .sort((a, b) => (b > a ? 1 : b < a ? -1 : 0));
   const shadeOf = (leg: bigint) =>
     rungs.length < 2 ? 0 : Math.round((rungs.findIndex((r) => r === leg) / (rungs.length - 1)) * 3);
+
+  /* How crowded each rung actually is, counted from the pool rather than
+     asserted. Null until the scan lands, which is a third state on purpose:
+     "we have not counted yet" must not render as "nobody uses this". */
+  const crowd = sizes ? rungs.map((r) => crowdAt(sizes, bucketer.symbol, r)) : null;
+  const worst = crowd?.reduce((a, b) => (b.people < a.people ? b : a)) ?? null;
 
   return (
     <figure className="splitfig">
@@ -503,21 +567,92 @@ function SplitBar({
 
       {/* The values, once, grouped — not a label on every segment. Four 0.1s are
           one fact, and the grouping is also what the privacy report reads: it is
-          the count of DISTINCT sizes that makes a combination a pattern. */}
+          the count of DISTINCT sizes that makes a combination a pattern.
+
+          Each carries how many people have used that exact size, because "a
+          standard denomination" and "a size other people actually use" are not
+          the same claim, and only the second one protects anybody. Measured on
+          mainnet: 1 STRK is 20 notes from 10 people, while 250 STRK is on the
+          ladder and had no notes at all in the same window. */}
       <figcaption className="splitfig-cap">
-        {rungs.map((r) => {
-          const n = legs.filter((l) => l === r).length;
-          return (
-            <span className="splitkey" key={String(r)}>
-              <i className={`splitkey-sw splitseg-${shadeOf(r)}`} aria-hidden="true" />
-              {num(r)}
-              {n > 1 && <span className="splitkey-x">&times;{n}</span>}
-            </span>
-          );
-        })}
-        <span className="splitkey-note">standard sizes, not necessarily common ones</span>
+        <div className="splitkeys">
+          {rungs.map((r) => {
+            const n = legs.filter((l) => l === r).length;
+            const c = crowd?.find((x) => x.amount === r.toString());
+            return (
+              <span className="splitkey" key={String(r)}>
+                <i className={`splitkey-sw splitseg-${shadeOf(r)}`} aria-hidden="true" />
+                {num(r)}
+                {n > 1 && <span className="splitkey-x">&times;{n}</span>}
+                {c && (
+                  <span
+                    /* Amber at one person, not only at zero. A rung one
+                       address has used is not a smaller crowd than a rung
+                       three have used — it is not a crowd, and that address
+                       may well be the reader's own. Rendering it in the same
+                       neutral grey as "3 people" would make a failure look
+                       like a lesser success. */
+                    className={`splitkey-c${c.people <= 1 ? ' splitkey-c-thin' : ''}`}
+                    title={`${c.notes} note${c.notes === 1 ? '' : 's'} of this size in the window, from ${c.people} address${c.people === 1 ? '' : 'es'}`}
+                  >
+                    {c.people === 0 ? 'nobody' : `${c.people}\u00a0${c.people === 1 ? 'person' : 'people'}`}
+                  </span>
+                )}
+              </span>
+            );
+          })}
+        </div>
+        <CrowdVerdict worst={worst} symbol={bucketer.symbol} label={worst ? num(BigInt(worst.amount)) : ''} />
       </figcaption>
     </figure>
+  );
+}
+
+/* The verdict on the rarest leg, which is the only one that matters.
+ *
+ * A plan is exactly as private as its thinnest rung — the same reasoning
+ * `planBuckets` uses to refuse a scattered split. Averaging the crowd across
+ * legs would let a well-populated 1 STRK hide the fact that the 250 beside it
+ * is unique, and the unique one is what an observer keys on.
+ *
+ * Note the wording: "people have used", never "other people". The histogram
+ * counts depositor addresses and one of them may be the person reading this,
+ * so "others" would overstate the crowd by one — small, but this panel's whole
+ * claim is that it does not round its numbers in its own favour.
+ */
+function CrowdVerdict({
+  worst,
+  symbol,
+  label,
+}: {
+  worst: SizeCount | null;
+  symbol: string;
+  label: string;
+}) {
+  if (!worst)
+    return (
+      <span className="splitkey-note">
+        standard sizes — counting how many people use them…
+      </span>
+    );
+
+  if (worst.people === 0)
+    return (
+      <span className="splitkey-note splitkey-note-warn">
+        Nobody else in the pool has moved <b>{label} {symbol}</b> recently. That leg
+        is distinctive on its own — a rounder amount splits into commoner sizes.
+      </span>
+    );
+
+  return (
+    <span className={`splitkey-note${worst.people === 1 ? ' splitkey-note-warn' : ''}`}>
+      Rarest size here is <b>{label} {symbol}</b>, used by{' '}
+      <b>
+        {worst.people} {worst.people === 1 ? 'person' : 'people'}
+      </b>{' '}
+      in the pool's recent window
+      {worst.people === 1 && ' — standard, but not yet a crowd'}.
+    </span>
   );
 }
 

@@ -68,17 +68,26 @@ open notes already sit. A `13` was tried first and rejected as a bad choice:
 it decomposes to `10 + 2.5 + 0.5`, and each of those three would have been one
 of a kind in the window — technically on the ladder, and hiding among nobody.
 
-This is the gap between *valid* and *private*, and it is measurable. The app
-currently captions the split "each a size other people also use", which the
-table above shows is not always true — see the note at the end of
-[docs/anonymizer.md](anonymizer.md).
+This is the gap between *valid* and *private*, and it is measurable — so the
+app now measures it. The split panel counts these sizes live from the pool and
+prints the population of each rung beside it, then names the rarest leg. Typing
+`8.4` gets `5` (3 people), `2.5` (1), `0.5` (1), `0.1x4` (3) and the verdict
+*"Rarest size here is 2.5 STRK, used by 1 person — standard, but not yet a
+crowd."* Typing `6` gets `5 + 1` and the panel refuses to call it distinctive at
+all. See [docs/anonymizer.md](anonymizer.md) for the method.
 
-**Caveat, stated precisely:** these counts cover *open* notes — the ones created
-through anonymizer contracts, whose amounts are public by design. Ordinary
-private notes emit encrypted amounts and cannot be counted by anyone without the
-viewing key. Open notes are the right comparison set, because a note this
-contract creates is itself an open note, but the number is not "every note in
-the pool".
+**Caveat, corrected.** An earlier version of this file said only *open* notes
+could be counted, because ordinary notes hide their amounts. That was wrong: the
+pool's `Deposit` event publishes `(user, token, amount)` in the clear, so every
+note that entered the pool from outside is countable too — and those are most of
+the join set. What is genuinely uncountable is note-to-note transfers inside the
+pool. The table above was open notes only and therefore understated every rung;
+the current, wider counts are in [docs/anonymizer.md](anonymizer.md).
+
+The counts also report **distinct depositor addresses**, not note counts, and
+the two differ enough to matter: 5 STRK is 11 notes from 3 addresses, while 6
+STRK is 14 notes from 14. Ranking by notes would have picked the worse hiding
+place.
 
 ## Verifying these yourself
 
