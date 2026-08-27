@@ -247,21 +247,6 @@ export function DenominatePanel({
         <AmountLede text={text} amount={amount} bucketer={bucketer} sizes={sizes} />
       )}
 
-      {network.bucketers.length > 1 && (
-        <div className="seg" role="group" aria-label="Token">
-          {network.bucketers.map((b) => (
-            <button
-              key={b.address}
-              type="button"
-              className={`seg-btn${b.address === bucketer.address ? ' seg-on' : ''}`}
-              onClick={() => { setBucketer(b); setText(''); setLegs(null); }}
-            >
-              {b.symbol}
-            </button>
-          ))}
-        </div>
-      )}
-
       <label className="field">
         <span className="field-row">
           <span className="field-l">Amount to split</span>
@@ -292,25 +277,74 @@ export function DenominatePanel({
             </span>
           )}
         </span>
-        <input
-          className="input mono"
-          inputMode="decimal"
-          placeholder={`0 ${bucketer.symbol}`}
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          disabled={busy}
-        />
+        {/* The token sits inside the amount box rather than in a bar above it.
+            Two reasons it moved: detached, it read as an unexplained toggle with
+            no stated relationship to the number underneath — and it was reusing
+            `.seg`, which is a four-column grid built for the rest-period control,
+            so with two tokens the geometry was simply wrong.
+            *
+            Inside the field it is the idiom every swap interface already uses,
+            and it says what the number means without a label. */}
+        <div className={`amountbox${busy ? ' amountbox-off' : ''}`}>
+          <input
+            className="input mono amountbox-in"
+            inputMode="decimal"
+            placeholder="0"
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            disabled={busy}
+            aria-label={`Amount to split, in ${bucketer.symbol}`}
+          />
+          {network.bucketers.length > 1 ? (
+            <div className="tokseg" role="group" aria-label="Token">
+              {network.bucketers.map((b) => (
+                <button
+                  key={b.address}
+                  type="button"
+                  className={`tokseg-btn${b.address === bucketer.address ? ' tokseg-on' : ''}`}
+                  disabled={busy}
+                  aria-pressed={b.address === bucketer.address}
+                  /* The typed amount is deliberately kept across a switch.
+                     Clearing it made the user retype to answer "what does this
+                     become in the other token", which is the question the panel
+                     exists to answer. If the number is not splittable on the new
+                     ladder the panel says so — and that refusal is the lesson,
+                     since the ladders genuinely differ: STRK goes down to 0.1,
+                     USDC stops at 1. */
+                  onClick={() => {
+                    setBucketer(b);
+                    setLegs(null);
+                  }}
+                >
+                  {b.symbol}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <span className="tokfixed">{bucketer.symbol}</span>
+          )}
+        </div>
       </label>
 
 
-      {overBalance && (
-        <p className="err">
-          That is more than you hold shielded. The pool would reject it, so this
-          says so now rather than after you approve it.
-        </p>
-      )}
+      {/* One live region for both, announced politely.
+          *
+          * These are the two messages that answer what the user just typed, and
+          * they were visual-only: a screen-reader user got silence at exactly
+          * the moment the panel is doing its job — refusing an amount and
+          * explaining why. Polite rather than assertive because the content
+          * changes on every keystroke, and an assertive region would interrupt
+          * them mid-word, every word. */}
+      <div aria-live="polite">
+        {overBalance && (
+          <p className="err">
+            That is more than you hold shielded. The pool would reject it, so this
+            says so now rather than after you approve it.
+          </p>
+        )}
 
-      {!overBalance && planError && <p className="err">{planError}</p>}
+        {!overBalance && planError && <p className="err">{planError}</p>}
+      </div>
 
       {legs && amount !== null && (
         <SplitBar legs={legs} amount={amount} bucketer={bucketer} sizes={sizes} />
