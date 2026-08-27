@@ -186,6 +186,7 @@ Fork tests are excluded from CI on purpose: they need network access and a publi
 | Bucketer — Sepolia STRK, 0.1 rungs | [`0x00de39f7…0e6b`](https://sepolia.voyager.online/contract/0x00de39f79e7e8b0dcdafe955330e206990203d6047a22e853eab9df83c440e6b) |
 | Bucketer — Sepolia USDC, 1.0 rungs | [`0x004c368a…b1fb`](https://sepolia.voyager.online/contract/0x004c368ae058ee81b61884c5c47ee57484c4348669b66ac606366bbd1fd1b1fb) |
 | Bucketer — mainnet STRK, 0.1 rungs | [`0x036816fe…e97a`](https://voyager.online/contract/0x036816fe3c38b222e737ec4168b604309ab24154862d1a3f4c9db0042a90e97a) |
+| Bucketer — mainnet USDC, 1.0 rungs | [`0x06c63f43…8643`](https://voyager.online/contract/0x06c63f43ddfa18ce3e4b39ea4fae212cc65308ba181603d98fb5d5ee4a978643) |
 
 Addresses are also machine-readable in [`strk20.json`](strk20.json). Deploying is scripted, with a preflight that re-checks both constructor addresses are live contracts before anything is spent — see [docs/deploy.md](docs/deploy.md).
 

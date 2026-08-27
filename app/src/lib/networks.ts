@@ -63,6 +63,12 @@ export interface Network {
 
 const STRK = '0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d';
 
+/* Native Circle USDC on Starknet mainnet. Named because it is now referenced
+   twice — the bucketer's token and the recognised-token list — and two literals
+   that must match is a bug waiting to happen. */
+const MAINNET_USDC =
+  '0x033068f6539f8e6e6b131e6b2b814e6c34a5224bc66947c47dab9dfee93b35fb';
+
 const MAINNET: Network = {
   chainId: SN_MAIN,
   name: 'Starknet',
@@ -78,12 +84,24 @@ const MAINNET: Network = {
       decimals: 18,
       unit: 100_000_000_000_000_000n,
     },
+    /* USDC, 1-USDC rungs. Deployed because the cross-chain leg moves USDC and
+       nothing else — CCTP is a USDC protocol — so without this, money bridged in
+       could reach the pool but could not be split into standard sizes, which is
+       the only thing Airlock adds. Constructor values re-read from chain at
+       deploy time; see docs/mainnet.md. */
+    {
+      address: '0x06c63f43ddfa18ce3e4b39ea4fae212cc65308ba181603d98fb5d5ee4a978643',
+      token: MAINNET_USDC,
+      symbol: 'USDC',
+      decimals: 6,
+      unit: 1_000_000n,
+    },
   ],
   /* The same set the anonymity scan recognises, so the two panels agree about
      which tokens exist. SLAY and WBTC are here because the pool takes them. */
   tokens: [
     { address: STRK, symbol: 'STRK', decimals: 18 },
-    { address: '0x033068f6539f8e6e6b131e6b2b814e6c34a5224bc66947c47dab9dfee93b35fb', symbol: 'USDC', decimals: 6 },
+    { address: MAINNET_USDC, symbol: 'USDC', decimals: 6 },
     { address: '0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7', symbol: 'ETH', decimals: 18 },
     { address: '0x068f5c6a61780768455de69077e07e89787839bf8166decfbf92b645209c0fb8', symbol: 'USDT', decimals: 6 },
     { address: '0x053c91253bc9682c04929ca02ed00b3e423f6710d2ee7e0d5ebb06f3ecf368a8', symbol: 'USDC.e', decimals: 6 },

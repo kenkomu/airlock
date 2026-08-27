@@ -10,5 +10,13 @@ url = "https://starknet-sepolia-rpc.publicnode.com"
 account = "airlock-deployer"
 
 [sncast.mainnet]
-url = "https://starknet-rpc.publicnode.com"
+# Was starknet-rpc.publicnode.com, which failed three separate ways during one
+# deployment session: a 50k-block event query that never returned, a
+# `starknet_getClass` existence check that timed out and made the script conclude
+# a declared class was undeclared, and a `spec_version` call that dropped the
+# connection mid-declare. Each failure is individually survivable; together they
+# make a script that spends money unpredictable, and the second one is the
+# dangerous shape — a false negative that would have paid to declare a class
+# that was already there.
+url = "https://api.cartridge.gg/x/starknet/mainnet"
 account = "airlock-deployer"

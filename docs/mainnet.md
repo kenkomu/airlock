@@ -28,7 +28,8 @@ verified by class-hash match. **Airlock deploys neither** — it points at these
 | --- | --- | --- |
 | AirlockBucketer — USDC, 1-USDC rungs | Sepolia | `0x004c368ae058ee81b61884c5c47ee57484c4348669b66ac606366bbd1fd1b1fb` |
 | AirlockBucketer — STRK, 0.1-STRK rungs | Sepolia | `0x00de39f79e7e8b0dcdafe955330e206990203d6047a22e853eab9df83c440e6b` |
-| AirlockBucketer | mainnet | not yet deployed |
+| AirlockBucketer — STRK, 0.1-STRK rungs | mainnet | `0x036816fe3c38b222e737ec4168b604309ab24154862d1a3f4c9db0042a90e97a` |
+| AirlockBucketer — USDC, 1-USDC rungs | mainnet | `0x06c63f43ddfa18ce3e4b39ea4fae212cc65308ba181603d98fb5d5ee4a978643` |
 
 One class, two deployments. `pool`, `token` and `unit` are constructor
 arguments with no setters, so an anonymizer serves exactly one token on one
