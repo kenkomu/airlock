@@ -2851,3 +2851,21 @@ body {
 .dep-tx {
   overflow-wrap: anywhere;
 }
+
+/* The withdraw leg, separated from the deposit above it by a rule rather than a
+   card — they are two halves of one round trip, not two offers. */
+.wd-sep {
+  margin-top: var(--s4);
+  padding-top: var(--s4);
+  border-top: 1px solid var(--border-soft);
+}
+.wd-h {
+  margin: 0 0 var(--s3);
+  font-size: 0.95rem;
+  font-weight: 650;
+}
+.wd {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s3);
+}

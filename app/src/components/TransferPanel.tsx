@@ -33,6 +33,8 @@ import type { WalletSession } from '../hooks/useWallet';
 import type { EvmIdentitySession } from '../hooks/useEvmIdentity';
 import { useDeposit } from '../hooks/useDeposit';
 import { DepositSteps } from './DepositSteps';
+import { WithdrawPanel } from './WithdrawPanel';
+import { useWithdraw } from '../hooks/useWithdraw';
 import { formatUnits } from '../lib/wallet';
 
 export interface TransferState {
@@ -155,6 +157,19 @@ export function TransferPanel({ onChange, session, evmSession, onConnect }: Prop
   });
   const depositBusy =
     deposit.state.phase === 'loading' || deposit.state.phase === 'running';
+
+  /* The other leg. Same identity, same engine chunk — whichever the user reaches
+     first pays the load and the second is free. */
+  const withdraw = useWithdraw({
+    getSignature: async () => {
+      const creds = evmSession.takeCredentials();
+      if (!creds) throw new Error('Connect a wallet from another chain first.');
+      return creds.signature;
+    },
+    getEvmAddress: () =>
+      evmSession.state.phase === 'ready' ? evmSession.state.identity.evmAddress : null,
+    destChainId: toId,
+  });
   /* This button cannot be enabled by anything the user does: the bridge legs are
      not built. So the only question the label has to get right is WHOSE gap it
      is naming, and it was getting that wrong in both directions.
@@ -414,6 +429,18 @@ export function TransferPanel({ onChange, session, evmSession, onConnect }: Prop
             : 'Moving funds in works from a wallet on another chain — MetaMask, Rabby, any of them. Splitting a shielded balance works today, see Denominate above.'}
         </p>
       )}
+
+      {/* The way out, under the way in, because that is the order they happen
+          in and the second only makes sense once the first has. */}
+      <div className="wd-sep">
+        <h3 className="wd-h">Take it out on {byId(toId).name}</h3>
+        <WithdrawPanel
+          session={withdraw}
+          chainName={byId(toId).name}
+          disabled={!evmReady}
+          reason="Connect from another chain to withdraw."
+        />
+      </div>
     </section>
   );
 }
