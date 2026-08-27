@@ -24,7 +24,7 @@ The honest answer to "can I use this". Deliberately placed before the design, so
 |---|---|
 | ✅ | **Live demo**, deployed from `main` on every push and gated on the test suite |
 | ✅ | **`AirlockBucketer` anonymizer in Cairo** — denomination bucketing, the mitigation StarkWare's own threat model defers ([docs/anonymizer.md](docs/anonymizer.md)) |
-| ✅ | **Deployed to mainnet** — a STRK bucketer at [`0x036816fe…e97a`](https://voyager.online/contract/0x036816fe3c38b222e737ec4168b604309ab24154862d1a3f4c9db0042a90e97a), constructor values re-read from chain |
+| ✅ | **Deployed to mainnet** — bucketers for [STRK](https://voyager.online/contract/0x036816fe3c38b222e737ec4168b604309ab24154862d1a3f4c9db0042a90e97a) and [USDC](https://voyager.online/contract/0x06c63f43ddfa18ce3e4b39ea4fae212cc65308ba181603d98fb5d5ee4a978643), constructor values re-read from chain after deploy |
 | ✅ | **Deployed to Sepolia** — two bucketers, STRK and USDC, both verified against chain |
 | ✅ | **The real pool calls it** — the deployed Sepolia pool runs its real entry point against our deployed contract ([below](#the-pool-really-does-call-it)) |
 | ✅ | Anonymity-set and timing disclosure, read live from the mainnet pool — no wallet required |
@@ -32,10 +32,47 @@ The honest answer to "can I use this". Deliberately placed before the design, so
 | ✅ | Split a shielded balance into standard note sizes, with the split read from the contract rather than computed in the client |
 | ✅ | **Per-rung crowd measurement** — how many people have actually used each note size, counted live from the pool's own events, with the rarest leg named ([docs/anonymizer.md](docs/anonymizer.md)) |
 | ✅ | **Four real mainnet round trips** through the anonymizer — amounts, splits, fees and verification in [docs/mainnet-runs.md](docs/mainnet-runs.md) |
-| ⬜ | Bridge in over CCTP, and withdraw to a different chain |
-| ⬜ | Starknet account derived deterministically from an EVM signature; sponsored registration |
+| ✅ | **Connect from a chain that is not Starknet** — one MetaMask signature derives a Starknet account and viewing key, no Starknet wallet required ([`identity.ts`](app/src/lib/identity.ts)) |
+| 🟡 | **Bridge in over CCTP** — deploy, register and deposit run from one press, funded out of the USDC being moved. Built, but **not yet run against a real chain**; treat as unproven until a transfer has landed |
+| ⬜ | Withdraw to a different chain |
 
-**49 Cairo tests** (39 offline, 10 against a forked chain) and **100 TypeScript tests**, run on every push.
+**49 Cairo tests** (39 offline, 10 against a forked chain) and **142 TypeScript tests**, run on every push.
+
+## Why this exists
+
+**Mission — tell people the truth about how private they actually are, and then
+make them more private than they were.**
+
+Every privacy tool says it makes you private. Almost none will tell you when it
+has failed to. That gap is where people get hurt: they take the claim at face
+value, move money in a way that identifies them, and find out afterwards. Airlock
+measures the thing it is selling and reports the answer even when the answer is
+bad — including about itself.
+
+**Vision — "private" should be a number you can check, not a word in a pitch.**
+
+A privacy tool ought to be judged on what it measures and discloses, not on what
+it asserts. That means publishing the size *and the shape* of the crowd you are
+hiding in, naming the leaks it cannot close, and being verifiable by someone who
+does not trust the people who built it.
+
+### What that means in practice
+
+These are not aspirations. Each one is a decision already made in this
+repository, and the place to check it:
+
+| | |
+|---|---|
+| **Name the leak** | The privacy report says **Linkable** about Airlock's own output when the crowd is thin. The verdict is the worst factor, never an average — a good amount does not rescue a two-minute round trip ([`exposure.ts`](app/src/lib/exposure.ts)) |
+| **Measure, do not assert** | "135 deposits" can be one bot with 135 wallets. Airlock resolves the sender of every deposit and reports the concentration, and counts how many *people* — not notes — have used each denomination ([`pool.ts`](app/src/lib/pool.ts)) |
+| **Fail closed** | An amount that is not an exact sum of the ladder reverts. It is never quietly rounded, because a remainder the user cannot see is worse than a refusal they can ([`bucketer.cairo`](src/bucketer.cairo)) |
+| **Hold no privileged position** | No owner, no admin key, no upgrade path, no mutable storage. The account that deployed the contract can do nothing the public cannot ([docs/anonymizer.md](docs/anonymizer.md)) |
+| **Say it where it is read** | Caveats sit at the moment of action, not in a footnote — the weaker of the two connection paths carries its warning on the screen where you choose it, while your wallet prompt is open |
+| **Do not overclaim, in either direction** | Cross-chain deposits are built but have never run against a real chain, and the interface says exactly that. Understating working features is also a form of lying |
+
+The last one is the one that costs something. It would be easy to describe this
+as a finished cross-chain privacy hub; the honest description is narrower and
+less impressive, and it is the one on this page.
 
 ## What is and isn't private
 

@@ -112,14 +112,26 @@ export default function App() {
           <AnonymityPanel state={anon} />
         </Boundary>
 
+        {/* The status here is deliberately three-way, because "works" and
+            "doesn't" would both be lies now.
+            *
+            Moving funds IN is built — deploy, register and deposit run from one
+            press, funded out of what is being moved. It has not yet been run
+            against a real chain, and code that has never executed is not a
+            working feature no matter how complete it looks. Moving funds OUT is
+            genuinely not built. Saying "not wired yet" over all of it now
+            understates the app; saying it works would overstate it, which is
+            the failure this project exists to avoid. */}
         <section className="next-up" aria-labelledby="prev-h">
           <div className="next-up-h">
-            <h2 id="prev-h">Coming next — cross-chain routing</h2>
-            <span className="next-up-tag">not wired yet</span>
+            <h2 id="prev-h">Cross-chain routing</h2>
+            <span className="next-up-tag">in, untested · out, unbuilt</span>
           </div>
           <p className="next-up-sub">
-            The leak assessment on the right is real and runs on what you pick.
-            The route itself does not execute — bridging in and out is the
+            The leak assessment on the right is real and runs on whatever you
+            pick. Moving funds <b>in</b> from another chain is built and waiting
+            on its first real transfer — until one has landed, treat it as
+            unproven. Moving funds <b>out</b> to a different chain is the
             remaining work.
           </p>
 
