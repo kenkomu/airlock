@@ -12,11 +12,17 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@noble/curves": "^1.9.0",
+    "@noble/hashes": "^1.8.0",
     "@starknet-io/get-starknet-discovery": "6.0.2",
     "@starknet-io/get-starknet-wallet-standard": "6.0.2",
+    "hpke": "1.0.6",
+    "ohttp-ts": "^0.3.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
-    "starknet": "10.4.0"
+    "starknet": "10.4.0",
+    "viem": "^2.21.0",
+    "zod": "^3.24.0"
   },
   "devDependencies": {
     "@rolldown/binding-linux-x64-gnu": "1.2.4",

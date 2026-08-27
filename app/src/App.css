@@ -1614,10 +1614,10 @@ body::before {
    you can click now outranks a wallet you would have to go and get. Dashed,
    transparent, and the name is not bolded. */
 .wmissing {
-  display: flex;
-  flex-direction: column;
-  gap: var(--s2);
-  margin-top: var(--s2);
+  margin: var(--s1) 0 0;
+}
+.wmissing a {
+  color: var(--text-2);
 }
 .wrow-get {
   background: transparent;
@@ -2610,4 +2610,52 @@ body {
 }
 .door-warn b {
   color: var(--leak);
+}
+
+/* The three-word privacy tag on each wallet row. Recessive — it must not
+   compete with the wallet's name, which is what people actually scan for —
+   but present on every row so the difference between the two kinds of wallet
+   is visible at the point the choice is made. */
+.wtag {
+  font-size: 0.72rem;
+  color: var(--text-3);
+  white-space: nowrap;
+  letter-spacing: 0.01em;
+}
+@media (max-width: 420px) {
+  /* Narrow enough that name and tag would collide. The name wins. */
+  .wtag {
+    display: none;
+  }
+}
+
+/* The step being waited on, while the wallet's own prompt is open. */
+.door-step {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  margin: 0;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+.door-spin {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  border: 2px solid var(--border-hi);
+  border-top-color: var(--accent);
+  animation: door-spin 0.7s linear infinite;
+}
+@keyframes door-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+/* Respect a stated preference for less motion: hold the ring still rather than
+   spinning it, since it is decoration and the text carries the meaning. */
+@media (prefers-reduced-motion: reduce) {
+  .door-spin {
+    animation: none;
+  }
 }

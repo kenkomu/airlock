@@ -8,12 +8,24 @@ importers:
 
   .:
     dependencies:
+      '@noble/curves':
+        specifier: ^1.9.0
+        version: 1.9.7
+      '@noble/hashes':
+        specifier: ^1.8.0
+        version: 1.8.0
       '@starknet-io/get-starknet-discovery':
         specifier: 6.0.2
-        version: 6.0.2(typescript@6.0.3)(zod@4.4.3)
+        version: 6.0.2(typescript@6.0.3)(zod@3.25.76)
       '@starknet-io/get-starknet-wallet-standard':
         specifier: 6.0.2
-        version: 6.0.2(typescript@6.0.3)(zod@4.4.3)
+        version: 6.0.2(typescript@6.0.3)(zod@3.25.76)
+      hpke:
+        specifier: 1.0.6
+        version: 1.0.6
+      ohttp-ts:
+        specifier: ^0.3.0
+        version: 0.3.5
       react:
         specifier: ^19.2.8
         version: 19.2.8
@@ -22,7 +34,13 @@ importers:
         version: 19.2.8(react@19.2.8)
       starknet:
         specifier: 10.4.0
-        version: 10.4.0(typescript@6.0.3)(zod@4.4.3)
+        version: 10.4.0(typescript@6.0.3)(zod@3.25.76)
+      viem:
+        specifier: ^2.21.0
+        version: 2.55.19(typescript@6.0.3)(zod@3.25.76)
+      zod:
+        specifier: ^3.24.0
+        version: 3.25.76
     devDependencies:
       '@rolldown/binding-linux-x64-gnu':
         specifier: 1.2.4
@@ -235,6 +253,10 @@ packages:
     os: [linux]
     libc: [glibc]
 
+  '@noble/ciphers@1.3.0':
+    resolution: {integrity: sha512-2I0gnIVPtfnMw9ee9h1dJG7tp81+8Ob3OJb3Mv37rx5L40/b0i7djjCVvGOVqc9AEIQyvyu1i6ypKdFw8R8gQw==}
+    engines: {node: ^14.21.3 || >=16}
+
   '@noble/ciphers@2.2.0':
     resolution: {integrity: sha512-Z6pjIZ/8IJcCGzb2S/0Px5J81yij85xASuk1teLNeg75bfT07MV3a/O2Mtn1I2se43k3lkVEcFaR10N4cgQcZA==}
     engines: {node: '>= 20.19.0'}
@@ -245,6 +267,10 @@ packages:
 
   '@noble/curves@1.7.0':
     resolution: {integrity: sha512-UTMhXK9SeDhFJVrHeUJ5uZlI6ajXg10O6Ddocf9S6GjbSBVZsJo88HzKwXznNfGpMTRDyJkqMjNDPYgf0qFWnw==}
+    engines: {node: ^14.21.3 || >=16}
+
+  '@noble/curves@1.9.1':
+    resolution: {integrity: sha512-k11yZxZg+t+gWvBbIswW0yoJlu8cHOC7dhunwOzoWH/mXGBiYyR4YY6hAEK/3EUs4UpB8la1RfdRpeGsFHkWsA==}
     engines: {node: ^14.21.3 || >=16}
 
   '@noble/curves@1.9.7':
@@ -764,6 +790,17 @@ packages:
     resolution: {integrity: sha512-0aA81FScmJCPX+8UvkXLki3X1+yPQuWxEkqXBVKltgPAK79J+NB+Lp5DouMXa7L6f+zcRlIA/6XO7BN/q9fnvg==}
     hasBin: true
 
+  abitype@1.2.3:
+    resolution: {integrity: sha512-Ofer5QUnuUdTFsBRwARMoWKOH1ND5ehwYhJ3OJ/BQO+StkwQjHw0XyVh4vDttzHB7QOFhPHa/o413PJ82gU/Tg==}
+    peerDependencies:
+      typescript: '>=5.0.4'
+      zod: ^3.22.0 || ^4.0.0
+    peerDependenciesMeta:
+      typescript:
+        optional: true
+      zod:
+        optional: true
+
   abitype@1.3.0:
     resolution: {integrity: sha512-fk6Te+bojIFrMvMZrnOO+SxCB+RUksTGOzq/60ZRvs1L+BVzvi2bqt9L3W/17ZLdZsyM1FuYf65P5nlmoiH1Bg==}
     peerDependencies:
@@ -792,6 +829,10 @@ packages:
 
   async-mutex@0.5.0:
     resolution: {integrity: sha512-1A94B18jkJ3DYq284ohPxoXbfTA5HsQ7/Mf4DEhcyLx3Bz27Rh59iScbB6EPiP+B+joue6YCxcMXSbFC1tZKwA==}
+
+  bhttp-ts@0.4.5:
+    resolution: {integrity: sha512-CDDrORHWA1OeLKgmjBM5aOW4/RS2bHoLEAIYcFq86sXdWJnJE/ZDOHBdx5lxP9QrJPP2TfBNpdlaP78D4zQ17g==}
+    engines: {node: '>=22'}
 
   cac@6.7.14:
     resolution: {integrity: sha512-b6Ilus+c3RrdDk+JhLKUAQfzzgLEPy6wcXqS7f/xe1EETvsDP6GORG7SFuOs6cID5YkqchW/LXZbX5bc8j7ZcQ==}
@@ -895,9 +936,20 @@ packages:
   graceful-fs@4.2.11:
     resolution: {integrity: sha512-RbJ5/jmFcNNCcDV5o9eTnBLJ/HszWV0P73bc+Ff4nS/rJj+YaS6IGyiOL0VoBYX+l1Wrl3k63h/KrH+nhJ0XvQ==}
 
+  hpke@1.0.6:
+    resolution: {integrity: sha512-2T/TYYmlFRPWaBv6lTA/jGp/Y70aupUjDpvEn15z5iB0WiJLW4MyDsuUBXoCrCTW02xy4r8AiuuuAKNfD6ahsg==}
+
+  hpke@1.1.2:
+    resolution: {integrity: sha512-6Z8JoG/zYXly+MfsgQ5aNibBx/HDq2F74254Tv8VK4DR3/Mmf6zVrGakqsodfy9pF0XGKSYh5MA9x6D30gbhbg==}
+
   is-fullwidth-code-point@3.0.0:
     resolution: {integrity: sha512-zymm5+u+sCsSWyD9qNaejV3DFvhCKclKdizYaJUuHA83RLjb7nSuGnddCHGv0hk+KY7BMAlsWeK4Ueg6EV6XQg==}
     engines: {node: '>=8'}
+
+  isows@1.0.7:
+    resolution: {integrity: sha512-I1fSfDCZL5P0v33sVqeTDSpcstAg/N+wF5HS033mogOVIp4B+oHC7oOCsA3axAbBSGTJ8QubbNmnIRN/h8U7hg==}
+    peerDependencies:
+      ws: '*'
 
   js-tokens@9.0.1:
     resolution: {integrity: sha512-mxa9E9ITFOt0ban3j6L5MpjwegGz6lBQmM1IJkWeBZGcMxto50+eWdjC/52xDbS2vy0k7vIMK0Fe2wfL9OQSpQ==}
@@ -996,6 +1048,18 @@ packages:
     engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
     hasBin: true
 
+  ohttp-ts@0.3.5:
+    resolution: {integrity: sha512-SHgU/QR71/0e9D06T5CFVJ/qgv4Siljk17B2avVBSORBp+wC/S0xo6elg0NVk73WqZKNj6ixeJIqoPQs329cJw==}
+    engines: {node: '>=24'}
+
+  ox@0.14.34:
+    resolution: {integrity: sha512-12seOIk7dv8eAoGQhcWaeKZxNz304IVcDvb9U5Y7JZAEVe21Nm1YMxLjhWah+su5BD4Omx4Zz0z5x3ij9M4GYQ==}
+    peerDependencies:
+      typescript: '>=5.4.0'
+    peerDependenciesMeta:
+      typescript:
+        optional: true
+
   ox@0.4.4:
     resolution: {integrity: sha512-oJPEeCDs9iNiPs6J0rTx+Y0KGeCGyCAA3zo94yZhm8G5WpOxrwUtn2Ie/Y8IyARSqqY/j9JTKA3Fc1xs1DvFnw==}
     peerDependencies:
@@ -1042,6 +1106,9 @@ packages:
   postcss@8.5.26:
     resolution: {integrity: sha512-u82N74LFzG8ca+dD8puPnplTXoGH4fTPpVGuIbt36G3qvNlkvfD0lEAZSxaly3KX8TS/L1A1gsCEmvKmBcVbkQ==}
     engines: {node: ^10 || ^12 || >=14}
+
+  quicvarint@0.1.7:
+    resolution: {integrity: sha512-CW401DjRCKUS5fIq/s/qHhcm+kEwc097R8hN+ORngT2biSRsz5JIoAF7hMbdG/XRvEBVpuySmhmSJeJMxdoG8g==}
 
   react-dom@19.2.8:
     resolution: {integrity: sha512-rVprimfGBG3DR+Tq0IQG2DT5PxKth1WIGDmj5yPmlzr4YBe7uyE+Du4oVqTDXZSHGGGXRtTJEGSSePyQCMBglQ==}
@@ -1136,6 +1203,14 @@ packages:
   universalify@2.0.1:
     resolution: {integrity: sha512-gptHNQghINnc/vTGIk0SOFGFNXw7JVrlRUtConJRlvaw6DuX0wO5Jeko9sWrMBhh+PsYAZ7oXAiOnf/UKogyiw==}
     engines: {node: '>= 10.0.0'}
+
+  viem@2.55.19:
+    resolution: {integrity: sha512-4QPIX0eYPLsOBk53NKswVMkQoxuP7GlOBnB4wM6dkDokREO4QENNc3bmyPKK1PBTViXh0TPJCHLjIuU20Qi3fg==}
+    peerDependencies:
+      typescript: '>=5.0.4'
+    peerDependenciesMeta:
+      typescript:
+        optional: true
 
   vite-node@3.2.4:
     resolution: {integrity: sha512-EbKSKh+bh1E1IFxeO0pg1n4dvoOTt0UDiXMd/qn++r98+jPO1xtJilvXldeuQ8giIB5IkpjCgMleHMNEsGH6pg==}
@@ -1262,6 +1337,18 @@ packages:
     resolution: {integrity: sha512-YVGIj2kamLSTxw6NsZjoBxfSwsn0ycdesmc4p+Q21c5zPuZ1pl+NfxVdxPtdHvmNVOQ6XSYG4AUtyt/Fi7D16Q==}
     engines: {node: '>=10'}
 
+  ws@8.21.0:
+    resolution: {integrity: sha512-Vsp28b7DRcimFQvrqu2Wek3z1iYxDCWqHYB8Qsnk/S4RfaCQzPGPyBNuVjJV3cd6UiKtUtp6sNM77gWvzcCH+g==}
+    engines: {node: '>=10.0.0'}
+    peerDependencies:
+      bufferutil: ^4.0.1
+      utf-8-validate: '>=5.0.2'
+    peerDependenciesMeta:
+      bufferutil:
+        optional: true
+      utf-8-validate:
+        optional: true
+
   y18n@5.0.8:
     resolution: {integrity: sha512-0pfFzegeDWJHJIAmTLRP2DwHjdF5s7jo9tuztdQxAhINCdvS+3nGINqPd00AphqJR/0LhANUS6/+7SCb98YOfA==}
     engines: {node: '>=10'}
@@ -1273,6 +1360,9 @@ packages:
   yargs@17.7.3:
     resolution: {integrity: sha512-GZtjxm/J/4TSxuL3FNYjCmLktBTnIw/rVmKSIyKeYAZpmJB2ig9VauCC5xsa82GNKVKDAqpOn3KVzNt0zmrU0g==}
     engines: {node: '>=12'}
+
+  zod@3.25.76:
+    resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
 
   zod@4.4.3:
     resolution: {integrity: sha512-ytENFjIJFl2UwYglde2jchW2Hwm4GJFLDiSXWdTrJQBIN9Fcyp7n4DhxJEiWNAJMV1/BqWfW/kkg71UDcHJyTQ==}
@@ -1379,6 +1469,8 @@ snapshots:
   '@napi-rs/lzma-linux-x64-gnu@1.5.1':
     optional: true
 
+  '@noble/ciphers@1.3.0': {}
+
   '@noble/ciphers@2.2.0': {}
 
   '@noble/ciphers@2.3.0': {}
@@ -1386,6 +1478,10 @@ snapshots:
   '@noble/curves@1.7.0':
     dependencies:
       '@noble/hashes': 1.6.0
+
+  '@noble/curves@1.9.1':
+    dependencies:
+      '@noble/hashes': 1.8.0
 
   '@noble/curves@1.9.7':
     dependencies:
@@ -1622,10 +1718,10 @@ snapshots:
       '@noble/curves': 1.7.0
       '@noble/hashes': 1.6.1
 
-  '@starknet-io/get-starknet-discovery@6.0.2(typescript@6.0.3)(zod@4.4.3)':
+  '@starknet-io/get-starknet-discovery@6.0.2(typescript@6.0.3)(zod@3.25.76)':
     dependencies:
       '@starknet-io/get-starknet-virtual-wallet': 6.0.5(typescript@6.0.3)
-      '@starknet-io/get-starknet-wallet-standard': 6.0.2(typescript@6.0.3)(zod@4.4.3)
+      '@starknet-io/get-starknet-wallet-standard': 6.0.2(typescript@6.0.3)(zod@3.25.76)
       '@starknet-io/types-js': 0.10.3
       '@wallet-standard/base': 1.1.1
     transitivePeerDependencies:
@@ -1643,22 +1739,22 @@ snapshots:
     transitivePeerDependencies:
       - typescript
 
-  '@starknet-io/get-starknet-wallet-standard@5.0.0(typescript@6.0.3)(zod@4.4.3)':
+  '@starknet-io/get-starknet-wallet-standard@5.0.0(typescript@6.0.3)(zod@3.25.76)':
     dependencies:
       '@starknet-io/types-js': 0.7.10
       '@wallet-standard/base': 1.1.1
       '@wallet-standard/features': 1.1.1
-      ox: 0.4.4(typescript@6.0.3)(zod@4.4.3)
+      ox: 0.4.4(typescript@6.0.3)(zod@3.25.76)
     transitivePeerDependencies:
       - typescript
       - zod
 
-  '@starknet-io/get-starknet-wallet-standard@6.0.2(typescript@6.0.3)(zod@4.4.3)':
+  '@starknet-io/get-starknet-wallet-standard@6.0.2(typescript@6.0.3)(zod@3.25.76)':
     dependencies:
       '@starknet-io/types-js': 0.10.3
       '@wallet-standard/base': 1.1.1
       '@wallet-standard/features': 1.1.1
-      ox: 0.4.4(typescript@6.0.3)(zod@4.4.3)
+      ox: 0.4.4(typescript@6.0.3)(zod@3.25.76)
     transitivePeerDependencies:
       - typescript
       - zod
@@ -1763,6 +1859,16 @@ snapshots:
       fs-extra: 10.1.0
       yargs: 17.7.3
 
+  abitype@1.2.3(typescript@6.0.3)(zod@3.25.76):
+    optionalDependencies:
+      typescript: 6.0.3
+      zod: 3.25.76
+
+  abitype@1.3.0(typescript@6.0.3)(zod@3.25.76):
+    optionalDependencies:
+      typescript: 6.0.3
+      zod: 3.25.76
+
   abitype@1.3.0(typescript@6.0.3)(zod@4.4.3):
     optionalDependencies:
       typescript: 6.0.3
@@ -1781,6 +1887,10 @@ snapshots:
   async-mutex@0.5.0:
     dependencies:
       tslib: 2.8.1
+
+  bhttp-ts@0.4.5:
+    dependencies:
+      quicvarint: 0.1.7
 
   cac@6.7.14: {}
 
@@ -1883,7 +1993,15 @@ snapshots:
 
   graceful-fs@4.2.11: {}
 
+  hpke@1.0.6: {}
+
+  hpke@1.1.2: {}
+
   is-fullwidth-code-point@3.0.0: {}
+
+  isows@1.0.7(ws@8.21.0):
+    dependencies:
+      ws: 8.21.0
 
   js-tokens@9.0.1: {}
 
@@ -1954,14 +2072,35 @@ snapshots:
 
   nanoid@3.3.18: {}
 
-  ox@0.4.4(typescript@6.0.3)(zod@4.4.3):
+  ohttp-ts@0.3.5:
+    dependencies:
+      bhttp-ts: 0.4.5
+      hpke: 1.1.2
+      quicvarint: 0.1.7
+
+  ox@0.14.34(typescript@6.0.3)(zod@3.25.76):
+    dependencies:
+      '@adraffy/ens-normalize': 1.11.1
+      '@noble/ciphers': 1.3.0
+      '@noble/curves': 1.9.1
+      '@noble/hashes': 1.8.0
+      '@scure/bip32': 1.7.0
+      '@scure/bip39': 1.6.0
+      abitype: 1.3.0(typescript@6.0.3)(zod@3.25.76)
+      eventemitter3: 5.0.1
+    optionalDependencies:
+      typescript: 6.0.3
+    transitivePeerDependencies:
+      - zod
+
+  ox@0.4.4(typescript@6.0.3)(zod@3.25.76):
     dependencies:
       '@adraffy/ens-normalize': 1.11.1
       '@noble/curves': 1.9.7
       '@noble/hashes': 1.8.0
       '@scure/bip32': 1.7.0
       '@scure/bip39': 1.6.0
-      abitype: 1.3.0(typescript@6.0.3)(zod@4.4.3)
+      abitype: 1.3.0(typescript@6.0.3)(zod@3.25.76)
       eventemitter3: 5.0.1
     optionalDependencies:
       typescript: 6.0.3
@@ -2018,6 +2157,8 @@ snapshots:
       nanoid: 3.3.18
       picocolors: 1.1.1
       source-map-js: 1.2.1
+
+  quicvarint@0.1.7: {}
 
   react-dom@19.2.8(react@19.2.8):
     dependencies:
@@ -2092,14 +2233,14 @@ snapshots:
 
   stackback@0.0.2: {}
 
-  starknet@10.4.0(typescript@6.0.3)(zod@4.4.3):
+  starknet@10.4.0(typescript@6.0.3)(zod@3.25.76):
     dependencies:
       '@noble/curves': 1.7.0
       '@noble/hashes': 1.6.1
       '@scure/base': 1.2.6
       '@scure/starknet': 1.1.0
-      '@starknet-io/get-starknet-wallet-standard': 5.0.0(typescript@6.0.3)(zod@4.4.3)
-      '@starknet-io/get-starknet-wallet-standard-v6': '@starknet-io/get-starknet-wallet-standard@6.0.2(typescript@6.0.3)(zod@4.4.3)'
+      '@starknet-io/get-starknet-wallet-standard': 5.0.0(typescript@6.0.3)(zod@3.25.76)
+      '@starknet-io/get-starknet-wallet-standard-v6': '@starknet-io/get-starknet-wallet-standard@6.0.2(typescript@6.0.3)(zod@3.25.76)'
       '@starknet-io/starknet-types-0101': '@starknet-io/types-js@0.10.2'
       '@starknet-io/starknet-types-0103': '@starknet-io/types-js@0.10.3'
       '@starknet-io/starknet-types-09': '@starknet-io/types-js@0.9.2'
@@ -2147,6 +2288,23 @@ snapshots:
   undici-types@7.18.2: {}
 
   universalify@2.0.1: {}
+
+  viem@2.55.19(typescript@6.0.3)(zod@3.25.76):
+    dependencies:
+      '@noble/curves': 1.9.1
+      '@noble/hashes': 1.8.0
+      '@scure/bip32': 1.7.0
+      '@scure/bip39': 1.6.0
+      abitype: 1.2.3(typescript@6.0.3)(zod@3.25.76)
+      isows: 1.0.7(ws@8.21.0)
+      ox: 0.14.34(typescript@6.0.3)(zod@3.25.76)
+      ws: 8.21.0
+    optionalDependencies:
+      typescript: 6.0.3
+    transitivePeerDependencies:
+      - bufferutil
+      - utf-8-validate
+      - zod
 
   vite-node@3.2.4(@types/node@24.13.3)(lightningcss@1.33.0):
     dependencies:
@@ -2246,6 +2404,8 @@ snapshots:
       string-width: 4.2.3
       strip-ansi: 6.0.1
 
+  ws@8.21.0: {}
+
   y18n@5.0.8: {}
 
   yargs-parser@21.1.1: {}
@@ -2259,5 +2419,7 @@ snapshots:
       string-width: 4.2.3
       y18n: 5.0.8
       yargs-parser: 21.1.1
+
+  zod@3.25.76: {}
 
   zod@4.4.3: {}

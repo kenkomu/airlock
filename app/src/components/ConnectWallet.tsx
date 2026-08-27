@@ -15,6 +15,7 @@ import { AccountSheet } from './AccountSheet';
 import { EvmDoor } from './EvmDoor';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import type { EvmIdentitySession } from '../hooks/useEvmIdentity';
+import { walletRows } from '../lib/walletRows';
 
 /* Open state is owned by the page, because the primary CTA in the transfer card
    opens this same picker. Two buttons, one dialog. */
@@ -56,6 +57,27 @@ export function ConnectWallet({
      * would need the STRK20 probe to decide instead. None does today. */
   const evmNames = new Set(evmSession.wallets.map((w) => w.info.name.toLowerCase()));
   const wallets = allWallets.filter((w) => !evmNames.has(w.name.toLowerCase()));
+
+  /* Both kinds of wallet as one list of rows.
+   *
+   * Starknet wallets come first because they are the stronger option, and
+   * ordering is how that gets said now that the headings are gone.
+   *
+   * The tag is the compressed form of the caveat that used to be a paragraph.
+   * "Keys stay in wallet" versus "Keys made in browser" is the entire privacy
+   * difference in three words, on the row where the choice is made — which is
+   * both shorter and better placed than the prose it replaces. */
+  /* Rows are built by `walletRows`, which owns the ordering and the tag rule
+     and is tested directly — driving this through a browser needs a fake
+     wallet-standard handshake that would not reliably register, so the mixed
+     case could not be verified here. */
+  const rows = walletRows(wallets, evmSession.wallets.map((w) => w.info)).map((row) => ({
+    ...row,
+    onPick: () =>
+      row.kind === 'starknet'
+        ? void connect(wallets[row.index])
+        : void evmSession.connect(evmSession.wallets[row.index]),
+  }));
 
   /* Only while the picker is actually open — the markup below is unmounted when
      it is not, but the flag keeps the trap from arming on a stale ref. */
@@ -158,60 +180,64 @@ export function ConnectWallet({
               </button>
             </header>
 
-            {wallets.length > 0 && (
-              <ul className="wlist">
-                {wallets.map((w: Wallet) => (
-                  <li key={w.name}>
-                    <button
-                      type="button"
-                      className="wrow"
-                      onClick={() => connect(w)}
-                      disabled={connecting}
-                    >
-                      <img className="wicon" src={w.icon} alt="" />
-                      <span className="wname">{w.name}</span>
-                      <span className="wgo">
-                        {connecting && state.name === w.name ? 'connecting…' : '→'}
-                      </span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-
-            <MissingWallets found={wallets} />
-
-            {wallets.length === 0 && (
-              <p className="sm muted">
-                No Starknet wallet found in this browser yet. If you have just
-                installed one, it will appear here on its own.
-              </p>
-            )}
-
-            {state.phase === 'error' && (
-              <p className="notice notice-blocked sm" role="alert">
-                {state.message}
-              </p>
-            )}
-
-            {/* Scoped to this door, and only shown when this door has
-                something in it.
+            {/* One list, not two sections.
                 *
-                It used to sit at the foot of the sheet as one claim covering
-                everything above it, which was true while a Starknet wallet was
-                the only way in. Two things broke that: it is not true of the
-                door below, and with no Starknet wallet installed it made a
-                promise about a list that was empty — reassurance attached to
-                nothing, directly above the door that carries the opposite
-                caveat. */}
-            {wallets.length > 0 && (
-              <p className="muted sm">
-                Your viewing key stays in your wallet. Airlock never sees it —
-                the wallet does the proving.
-              </p>
-            )}
+                It was two, each with its own heading and its own paragraph, and
+                the result did not fit on screen — a wall of prose to scroll
+                before reaching the wallet you already knew you wanted. Users
+                pick a wallet by its logo; everything else was in the way.
+                *
+                What could NOT be dropped is that the two kinds have different
+                privacy properties. That is the product's whole argument. So it
+                survives as three words per row, and the full explanation moves
+                to the moment it is actionable — the confirm step after choosing
+                an EVM wallet, where it is read instead of scrolled past. */}
+            {evmSession.state.phase !== 'idle' ? (
+              <EvmDoor session={evmSession} busy={connecting} />
+            ) : (
+              <>
+                {rows.length > 0 && (
+                  <ul className="wlist">
+                    {rows.map((row) => (
+                      <li key={row.key}>
+                        <button
+                          type="button"
+                          className="wrow"
+                          onClick={row.onPick}
+                          disabled={connecting}
+                        >
+                          {row.icon ? (
+                            <img className="wicon" src={row.icon} alt="" />
+                          ) : (
+                            <span className="wicon" aria-hidden="true" />
+                          )}
+                          <span className="wname">{row.name}</span>
+                          {row.tag && <span className="wtag">{row.tag}</span>}
+                          <span className="wgo">
+                            {connecting && state.name === row.name ? '…' : '→'}
+                          </span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
 
-            <EvmDoor session={evmSession} busy={connecting} />
+                {rows.length === 0 && (
+                  <p className="sm muted">
+                    No wallet found in this browser. Install one and it appears
+                    here on its own.
+                  </p>
+                )}
+
+                {state.phase === 'error' && (
+                  <p className="notice notice-blocked sm" role="alert">
+                    {state.message}
+                  </p>
+                )}
+
+                <MissingWallets found={wallets} />
+              </>
+            )}
           </div>
         </div>
       )}
@@ -254,27 +280,28 @@ const PRIVACY_WALLETS = [
 
 function MissingWallets({ found }: { found: Wallet[] }) {
   const missing = PRIVACY_WALLETS.filter(
-    (p) => !found.some((w) => p.match.test(w.name)),
+    (p) => !found.some((p2) => p.match.test(p2.name)),
   );
   if (missing.length === 0) return null;
 
+  /* One quiet line, not a second list of rows.
+     *
+     * These used to render as full-height dashed rows, which gave a wallet you
+     * do not have the same visual weight as one you could click right now, and
+     * pushed the real choices off screen. A wallet you would have to go and
+     * install is a footnote. */
   return (
-    <div className="wmissing">
-      <p className="sm muted">
-        {found.length > 0 ? 'Not installed:' : 'Wallets that support this:'}
-      </p>
-      <ul className="wlist">
-        {missing.map((p) => (
-          <li key={p.name}>
-            <a className="wrow wrow-get" href={p.url} target="_blank" rel="noreferrer">
-              <span className="wname">{p.name}</span>
-              <span className="sm muted">{p.note}</span>
-              <span className="wgo">install ↗</span>
-            </a>
-          </li>
-        ))}
-      </ul>
-    </div>
+    <p className="sm muted wmissing">
+      Don't have one?{' '}
+      {missing.map((p, i) => (
+        <span key={p.name}>
+          {i > 0 && ' · '}
+          <a href={p.url} target="_blank" rel="noreferrer">
+            {p.name}
+          </a>
+        </span>
+      ))}
+    </p>
   );
 }
 

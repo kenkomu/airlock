@@ -12,6 +12,13 @@ dist
 dist-ssr
 *.local
 
+# The vendored pool SDK ships as built output, so its `dist` IS the dependency —
+# not a build artefact of this repo. The bare `dist` rule above would silently
+# leave it out of the commit, and the build only fails later, in CI, on an alias
+# pointing at a file that is not there.
+!vendor/**/dist/
+!vendor/**/dist/**
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

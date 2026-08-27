@@ -20,7 +20,15 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "erasableSyntaxOnly": true,
-    "noFallthroughCasesInSwitch": true
+    "noFallthroughCasesInSwitch": true,
+
+    /* Mirrors the alias in vite.config.ts — that one resolves the bundle, this
+       one resolves the types. They must not drift. */
+    "paths": {
+      "@starkware-libs/starknet-privacy-sdk": [
+        "./vendor/starknet-privacy-sdk/dist/index.d.ts"
+      ]
+    }
   },
   "include": ["src"]
 }
