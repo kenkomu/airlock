@@ -16,11 +16,24 @@ the Apache License 2.0 (see [`LICENSE`](./LICENSE)).
 ## Why it is vendored rather than installed
 
 The package is published to GitHub Packages, and that registry answers
-`403 permission_denied: read_package` for it — unlike the pool SDK next to it,
-which is readable and *is* installed as an ordinary dependency. Vendoring the
-Apache-2.0 sources is the licensed way to depend on code we cannot fetch, and it
-has a side benefit worth keeping: CI needs no credential to build the site, so a
-token expiring mid-sprint cannot take the live demo down.
+`403 permission_denied: read_package` for it. Vendoring the Apache-2.0 sources is
+the licensed way to depend on code we cannot fetch.
+
+## What is wired up so far
+
+Only `derivation/` and `lib/ethereum.ts`. Those are self-contained — they need
+`starknet` and `@noble/*` and nothing else — which is why this directory costs the
+build nothing today and the production bundle did not move when it landed.
+
+The `core/` orchestrators (`moveIntoPool`, `bridgeOut`, `withdrawToStarknet`, …)
+are present but not yet imported by anything, so their two heavier dependencies —
+`viem` and `@starkware-libs/starknet-privacy-sdk` — are deliberately **not** in
+`package.json` yet. That is not tidiness. The SDK lives on GitHub Packages, which
+needs a credential CI does not have, so declaring it before anything imports it
+would fail `pnpm install --frozen-lockfile` on every push and take the deployed
+demo down to buy nothing. Both get added in the same change that first imports an
+orchestrator, along with the CI auth this repo will then need. The `@starkware-libs`
+registry line in `app/.npmrc` is already there for that day, and is inert until then.
 
 ## What was left out
 
