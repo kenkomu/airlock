@@ -30,6 +30,9 @@ import {
 } from './Icons';
 import { ChainMark, UsdcMark } from './Marks';
 import type { WalletSession } from '../hooks/useWallet';
+import type { EvmIdentitySession } from '../hooks/useEvmIdentity';
+import { useDeposit } from '../hooks/useDeposit';
+import { DepositSteps } from './DepositSteps';
 import { formatUnits } from '../lib/wallet';
 
 export interface TransferState {
@@ -45,6 +48,7 @@ interface Props {
   onChange: (s: TransferState) => void;
   session: WalletSession;
   onConnect: () => void;
+  evmSession: EvmIdentitySession;
 }
 
 /* A native <select> kept for keyboard and mobile behaviour, laid transparently
@@ -99,7 +103,7 @@ function groupLegs(legs: number[]): { d: number; n: number }[] {
   }, []);
 }
 
-export function TransferPanel({ onChange, session, onConnect }: Props) {
+export function TransferPanel({ onChange, session, evmSession, onConnect }: Props) {
   const [fromId, setFromId] = useState(137);
   const [toId, setToId] = useState(42161);
   const [raw, setRaw] = useState('847.32');
@@ -136,6 +140,21 @@ export function TransferPanel({ onChange, session, onConnect }: Props) {
      different things and must not render the same. */
   const shielded = session.balances.find((b) => b.symbol === 'USDC');
   const conn = session.state.phase === 'connected' ? session.state.conn : null;
+
+  /* The deposit runs on the derived identity, not the Starknet wallet — it needs
+     the raw signature, which only the any-chain door has. */
+  const evmReady = evmSession.state.phase === 'ready';
+  const deposit = useDeposit({
+    getSignature: async () => {
+      const creds = evmSession.takeCredentials();
+      if (!creds) throw new Error('Connect a wallet from another chain first.');
+      return creds.signature;
+    },
+    getProvider: () => evmSession.takeCredentials()?.provider,
+    chainId: evmSession.state.phase === 'ready' ? evmSession.state.identity.chainId : undefined,
+  });
+  const depositBusy =
+    deposit.state.phase === 'loading' || deposit.state.phase === 'running';
   /* This button cannot be enabled by anything the user does: the bridge legs are
      not built. So the only question the label has to get right is WHOSE gap it
      is naming, and it was getting that wrong in both directions.
@@ -359,7 +378,21 @@ export function TransferPanel({ onChange, session, onConnect }: Props) {
         )}
       </dl>
 
-      {conn === null ? (
+      {/* The button is live for the any-chain door and still honest for the
+          others. It was disabled for everyone while the bridge legs did not
+          exist; they exist now, but only along the path where the app holds the
+          signature the engine needs. A Starknet-wallet user has no derived
+          identity, so for them this is unchanged and says so. */}
+      {evmReady ? (
+        <button
+          type="button"
+          className="btn btn-primary btn-lg"
+          disabled={!valid || depositBusy}
+          onClick={() => void deposit.start(BigInt(Math.round(amount * 1e6)))}
+        >
+          <IconLock /> {depositBusy ? 'Working…' : `Make ${amount || ''} USDC private`}
+        </button>
+      ) : conn === null ? (
         <button type="button" className="btn btn-primary btn-lg" onClick={onConnect}>
           <IconWallet /> Connect a wallet to continue
         </button>
@@ -368,14 +401,19 @@ export function TransferPanel({ onChange, session, onConnect }: Props) {
           <IconWallet />{' '}
           {walletCannot
             ? 'This wallet does not speak STRK20 yet'
-            : 'Bridge legs not wired yet'}
+            : 'Connect from another chain to move funds in'}
         </button>
       )}
-      <p className="muted sm center">
-        {walletCannot
-          ? 'Connection works; the shielded read did not. Update the wallet or try one that supports STRK20.'
-          : 'Cross-chain legs are still being built. Splitting a shielded balance works today — see Denominate above.'}
-      </p>
+
+      <DepositSteps session={deposit} />
+
+      {!evmReady && (
+        <p className="muted sm center">
+          {walletCannot
+            ? 'Connection works; the shielded read did not. Update the wallet or try one that supports STRK20.'
+            : 'Moving funds in works from a wallet on another chain — MetaMask, Rabby, any of them. Splitting a shielded balance works today, see Denominate above.'}
+        </p>
+      )}
     </section>
   );
 }

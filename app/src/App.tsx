@@ -130,6 +130,7 @@ export default function App() {
               <TransferPanel
                 onChange={onChange}
                 session={session}
+                evmSession={evmSession}
                 onConnect={() => setPickerOpen(true)}
               />
             </Boundary>

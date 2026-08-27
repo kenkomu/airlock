@@ -2757,3 +2757,97 @@ body {
     padding: 0 var(--s3);
   }
 }
+
+/* ---------- the deposit, while it runs ---------- */
+.dep {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s3);
+  margin-top: var(--s3);
+  padding: var(--s3);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--r);
+  background: var(--surface-2);
+}
+.dep-h {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 650;
+}
+.dep-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+}
+.dep-step {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s3);
+}
+.dep-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.dep-name {
+  font-size: 0.9rem;
+  font-weight: 550;
+}
+.dep-why {
+  font-size: 0.78rem;
+  color: var(--text-3);
+}
+.dep-stat {
+  font-size: 0.75rem;
+  color: var(--text-3);
+  white-space: nowrap;
+}
+/* The dot carries progress at a glance; the word carries it for a screen
+   reader and for anyone who cannot separate these hues. Never colour alone. */
+.dep-mark {
+  width: 10px;
+  height: 10px;
+  margin-top: 5px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  border: 2px solid var(--border-hi);
+}
+.dep-running .dep-mark {
+  border-color: var(--accent);
+  background: var(--accent-wash);
+}
+.dep-done .dep-mark {
+  border-color: var(--accent-fill);
+  background: var(--accent-fill);
+}
+.dep-error .dep-mark {
+  border-color: var(--blocked);
+  background: var(--blocked-wash);
+}
+.dep-done .dep-name,
+.dep-running .dep-name {
+  color: var(--text);
+}
+.dep-pending .dep-name {
+  color: var(--text-2);
+}
+
+/* Interrupted. Amber rather than red: nothing has gone wrong and no money is
+   lost — there is simply one action left, and the expensive mistake is starting
+   over instead of finishing. */
+.dep-pending {
+  border-color: color-mix(in srgb, var(--leak) 45%, transparent);
+  background: var(--leak-wash);
+}
+.dep-pending .dep-h {
+  color: var(--leak);
+}
+.dep-done {
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+}
+.dep-tx {
+  overflow-wrap: anywhere;
+}

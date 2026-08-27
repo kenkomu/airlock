@@ -58,6 +58,18 @@ export type EvmIdentityPhase =
   | { phase: 'ready'; identity: EvmIdentityPublic }
   | { phase: 'error'; message: string };
 
+/* Everything the deposit engine needs, none of which may be rendered.
+ *
+ * The engine re-derives the Starknet key and viewing key from the raw signature
+ * itself, so it wants the signature rather than the derived material. Kept in
+ * the same ref as the rest — in memory, never state, never storage — and reached
+ * through a getter so it cannot land in a render or a dependency array. */
+export interface DepositCredentials {
+  signature: `0x${string}`;
+  provider: unknown;
+  chainId: number;
+}
+
 export interface EvmIdentitySession {
   state: EvmIdentityPhase;
   /* EVM wallets the browser announced, via EIP-6963. */
@@ -69,12 +81,17 @@ export interface EvmIdentitySession {
      Returns null unless an identity has been derived. Kept as a function so it
      never lands in a render and never ends up in a dependency array. */
   takeSecrets: () => DerivedIdentity | null;
+  /* The signature and provider, for the deposit path. Null unless an identity
+     has been derived in this tab. Re-signing would be the alternative and would
+     cost the user a second wallet prompt for something we already have. */
+  takeCredentials: () => DepositCredentials | null;
 }
 
 export function useEvmIdentity(): EvmIdentitySession {
   const [wallets, setWallets] = useState<EvmWallet[]>([]);
   const [state, setState] = useState<EvmIdentityPhase>({ phase: 'idle' });
   const secrets = useRef<DerivedIdentity | null>(null);
+  const creds = useRef<DepositCredentials | null>(null);
 
   /* Subscribed on mount rather than when the picker opens: the discovery module
      starts listening at import, and a wallet that announced during page load
@@ -86,6 +103,7 @@ export function useEvmIdentity(): EvmIdentitySession {
   useEffect(() => {
     return () => {
       secrets.current = null;
+      creds.current = null;
     };
   }, []);
 
@@ -108,6 +126,11 @@ export function useEvmIdentity(): EvmIdentitySession {
 
       const identity = deriveIdentity(signature, OZ_ACCOUNT_CLASS_HASH);
       secrets.current = identity;
+      creds.current = {
+        signature: signature as `0x${string}`,
+        provider: wallet.provider,
+        chainId,
+      };
       setState({
         phase: 'ready',
         identity: {
@@ -120,6 +143,7 @@ export function useEvmIdentity(): EvmIdentitySession {
       });
     } catch (e) {
       secrets.current = null;
+      creds.current = null;
       if (isUserRejection(e)) {
         /* Declining is a decision, not a fault. Back to the start with nothing
            said, rather than an error banner blaming them for it. */
@@ -135,10 +159,12 @@ export function useEvmIdentity(): EvmIdentitySession {
 
   const forget = useCallback(() => {
     secrets.current = null;
+    creds.current = null;
     setState({ phase: 'idle' });
   }, []);
 
   const takeSecrets = useCallback(() => secrets.current, []);
+  const takeCredentials = useCallback(() => creds.current, []);
 
-  return { state, wallets, connect, forget, takeSecrets };
+  return { state, wallets, connect, forget, takeSecrets, takeCredentials };
 }
