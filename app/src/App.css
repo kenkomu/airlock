@@ -2550,3 +2550,64 @@ body {
     grid-column: 1 / -1;
   }
 }
+
+/* ---------- the second door ----------
+ *
+ * Separated from the Starknet wallets by a rule rather than a card, because it
+ * is a continuation of the same question ("how do you want to connect") and not
+ * a competing offer. Recessive on purpose: the stronger door should win by
+ * default, and this one should look like the fallback it is.
+ */
+.door {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+  margin-top: var(--s3);
+  padding-top: var(--s3);
+  border-top: 1px solid var(--border-soft);
+}
+.door-h {
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--text);
+}
+/* The derived account, once it exists. Two rows rather than a paragraph: the
+   user is here to compare an address, and prose makes that harder. */
+.door-id {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s1);
+  margin: 0;
+  padding: var(--s2) var(--s3);
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+}
+.door-id > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s3);
+}
+.door-id dt {
+  font-size: 0.8rem;
+  color: var(--text-3);
+}
+.door-id dd {
+  margin: 0;
+  font-size: 0.85rem;
+}
+/* The warning uses the leak palette, the same one the split panel uses for a
+   rung nobody else is standing on. Consistency matters more than novelty here:
+   amber already means "this is the honest caveat" everywhere else in the app. */
+.door-warn {
+  margin: 0;
+  padding: var(--s2) var(--s3);
+  border-radius: var(--r-sm);
+  border: 1px solid color-mix(in srgb, var(--leak) 40%, transparent);
+  background: var(--leak-wash);
+  color: var(--text-2);
+}
+.door-warn b {
+  color: var(--leak);
+}

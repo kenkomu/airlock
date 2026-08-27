@@ -12,6 +12,7 @@ import { IconShield } from './components/Icons';
 import { DenominatePanel } from './components/DenominatePanel';
 import { ConnectWallet, WalletNotice, NetworkBadge } from './components/ConnectWallet';
 import { useWallet } from './hooks/useWallet';
+import { useEvmIdentity } from './hooks/useEvmIdentity';
 import { Boundary } from './components/Boundary';
 import { ThemeToggle } from './components/ThemeToggle';
 
@@ -29,6 +30,10 @@ export default function App() {
   const onChange = useCallback((s: TransferState) => setTx(s), []);
 
   const session = useWallet();
+  /* The second door. Owned here rather than inside the picker because the
+     identity outlives the sheet — the sheet closes, the derived account stays,
+     and the panels below need to read it. */
+  const evmSession = useEvmIdentity();
   const [pickerOpen, setPickerOpen] = useState(false);
 
   /* One scan, shared by the report's crowd factor and the anonymity panel. */
@@ -61,7 +66,12 @@ export default function App() {
         <div className="top-right">
           <ThemeToggle />
           <NetworkBadge session={session} />
-          <ConnectWallet session={session} open={pickerOpen} setOpen={setPickerOpen} />
+          <ConnectWallet
+            session={session}
+            evmSession={evmSession}
+            open={pickerOpen}
+            setOpen={setPickerOpen}
+          />
         </div>
       </header>
 

@@ -19,7 +19,7 @@ import {
   deriveIdentity,
   shortAddress,
 } from '../identity';
-import { MAX_VIEWING_KEY } from '../../../vendor/bridge-core/src/derivation/index';
+import { MAX_VIEWING_KEY } from '../../../vendor/bridge-core/src/derivation/viewing-key';
 
 /* An OpenZeppelin account class hash. The value only has to be a valid felt for
    these tests — address derivation folds it in, it is not dereferenced. */

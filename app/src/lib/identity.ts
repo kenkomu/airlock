@@ -26,12 +26,19 @@
  * that only Airlock can reach would be a trap.
  */
 
+/* Imported from the individual modules rather than the package's `index`
+   barrel, and that is a size decision rather than a style one. The barrel
+   re-exports the Polygon-EOA and commitment derivations too, which pull in
+   `@noble/curves`' secp256k1 — 17 KB gzipped for code this door never calls,
+   landing in the initial bundle and slowing the one thing this app is best at,
+   which is answering before anyone connects anything. The two modules below
+   need only `starknet`. */
 import {
   deriveStarknetAccount,
   deriveStarknetPrivateKey,
-  deriveViewingKey,
   type StarknetAccount,
-} from '../../vendor/bridge-core/src/derivation/index';
+} from '../../vendor/bridge-core/src/derivation/starknet-key';
+import { deriveViewingKey } from '../../vendor/bridge-core/src/derivation/viewing-key';
 
 /* The message the user signs. This string IS the identity domain: the signature
    over it is the only secret input, so changing a single byte — the wording, the
@@ -54,6 +61,22 @@ export const AIRLOCK_IDENTITY_SIGN_MESSAGE = [
   '',
   'Version: 1',
 ].join('\n');
+
+/* The account class the derived address is computed against.
+ *
+ * This is part of the identity domain, not a deployment detail: the class hash
+ * is folded into the address, so pointing at a different account class derives a
+ * different address from the same signature and leaves the old one holding the
+ * funds. It is pinned here for the same reason the message above is.
+ *
+ * OpenZeppelin's account, the one StarkWare's own bridge deploys. A baked value
+ * is only safe if the class is actually declared on chain — an address computed
+ * against an undeclared class cannot be deployed to, and the failure arrives
+ * after the user has funded it. Checked rather than assumed: `starknet_getClass`
+ * returns it on Starknet mainnet and on Sepolia, and the hash is the same on
+ * both, which is why one constant covers both networks. */
+export const OZ_ACCOUNT_CLASS_HASH =
+  '0x5b4b537eaa2399e3aa99c4e2e0208ebd6c71bc1467938cd52c798c601e43564';
 
 /* A derived identity, in memory only.
  *

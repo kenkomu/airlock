@@ -8,12 +8,6 @@ importers:
 
   .:
     dependencies:
-      '@noble/curves':
-        specifier: ^1.9.0
-        version: 1.9.7
-      '@noble/hashes':
-        specifier: ^1.8.0
-        version: 1.8.0
       '@starknet-io/get-starknet-discovery':
         specifier: 6.0.2
         version: 6.0.2(typescript@6.0.3)(zod@4.4.3)

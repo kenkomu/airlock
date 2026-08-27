@@ -12,16 +12,20 @@ import { STRK20_MIN_READY, isBelow, isFirefox, rescanWallets, short } from '../l
 import { NETWORKS } from '../lib/networks';
 import { IconWallet } from './Icons';
 import { AccountSheet } from './AccountSheet';
+import { EvmDoor } from './EvmDoor';
 import { useFocusTrap } from '../hooks/useFocusTrap';
+import type { EvmIdentitySession } from '../hooks/useEvmIdentity';
 
 /* Open state is owned by the page, because the primary CTA in the transfer card
    opens this same picker. Two buttons, one dialog. */
 export function ConnectWallet({
   session,
+  evmSession,
   open,
   setOpen,
 }: {
   session: WalletSession;
+  evmSession: EvmIdentitySession;
   open: boolean;
   setOpen: (v: boolean) => void;
 }) {
@@ -29,8 +33,29 @@ export function ConnectWallet({
   const dialogRef = useRef<HTMLDivElement>(null);
   const [accountOpen, setAccountOpen] = useState(false);
 
-  const { state, wallets, connect, disconnect } = session;
+  const { state, wallets: allWallets, connect, disconnect } = session;
   const connecting = state.phase === 'connecting';
+
+  /* A wallet that the EVM side also announced belongs to the second door, not
+     this list.
+     *
+     * Starknet discovery wraps EIP-1193 wallets as "virtual" Starknet wallets,
+     * which is why MetaMask shows up here at all. Before the second door existed
+     * that was the right call — `wallet.ts` records the reasoning, that a wallet
+     * you have installed and cannot see is worse than one that asks a question.
+     * Now it is actively wrong: the same name appears twice in one sheet, and
+     * the copy at the top is the one that dead-ends on "this wallet does not
+     * speak STRK20 yet" while the copy at the bottom works.
+     *
+     * So the wallet stays visible — the old reasoning is satisfied — but only in
+     * the section where clicking it leads somewhere.
+     *
+     * Matched on name because that is what both discovery paths agree on; the
+     * Starknet side has no rdns to compare. If a wallet ever speaks both STRK20
+     * and EIP-1193, this would hide it from the door where it is stronger, and
+     * would need the STRK20 probe to decide instead. None does today. */
+  const evmNames = new Set(evmSession.wallets.map((w) => w.info.name.toLowerCase()));
+  const wallets = allWallets.filter((w) => !evmNames.has(w.name.toLowerCase()));
 
   /* Only while the picker is actually open — the markup below is unmounted when
      it is not, but the flag keeps the trap from arming on a stale ref. */
@@ -169,10 +194,24 @@ export function ConnectWallet({
               </p>
             )}
 
-            <p className="muted sm">
-              Your viewing key stays in your wallet. Airlock never sees it — the
-              wallet does the proving.
-            </p>
+            {/* Scoped to this door, and only shown when this door has
+                something in it.
+                *
+                It used to sit at the foot of the sheet as one claim covering
+                everything above it, which was true while a Starknet wallet was
+                the only way in. Two things broke that: it is not true of the
+                door below, and with no Starknet wallet installed it made a
+                promise about a list that was empty — reassurance attached to
+                nothing, directly above the door that carries the opposite
+                caveat. */}
+            {wallets.length > 0 && (
+              <p className="muted sm">
+                Your viewing key stays in your wallet. Airlock never sees it —
+                the wallet does the proving.
+              </p>
+            )}
+
+            <EvmDoor session={evmSession} busy={connecting} />
           </div>
         </div>
       )}
