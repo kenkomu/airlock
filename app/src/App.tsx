@@ -125,14 +125,14 @@ export default function App() {
         <section className="next-up" aria-labelledby="prev-h">
           <div className="next-up-h">
             <h2 id="prev-h">Cross-chain routing</h2>
-            <span className="next-up-tag">in, untested · out, unbuilt</span>
+            <span className="next-up-tag">both built · neither proven</span>
           </div>
           <p className="next-up-sub">
             The leak assessment on the right is real and runs on whatever you
-            pick. Moving funds <b>in</b> from another chain is built and waiting
-            on its first real transfer — until one has landed, treat it as
-            unproven. Moving funds <b>out</b> to a different chain is the
-            remaining work.
+            pick. Both legs of the round trip are now built — in from another
+            chain, and back out to an address you name. Neither has yet moved
+            money on a real chain, so treat both as unproven until a transfer
+            has landed.
           </p>
 
           {/* Transfer and its report are a pair and belong side by side: the

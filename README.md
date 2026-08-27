@@ -34,9 +34,9 @@ The honest answer to "can I use this". Deliberately placed before the design, so
 | ✅ | **Four real mainnet round trips** through the anonymizer — amounts, splits, fees and verification in [docs/mainnet-runs.md](docs/mainnet-runs.md) |
 | ✅ | **Connect from a chain that is not Starknet** — one MetaMask signature derives a Starknet account and viewing key, no Starknet wallet required ([`identity.ts`](app/src/lib/identity.ts)) |
 | 🟡 | **Bridge in over CCTP** — deploy, register and deposit run from one press, funded out of the USDC being moved. Built, but **not yet run against a real chain**; treat as unproven until a transfer has landed |
-| ⬜ | Withdraw to a different chain |
+| 🟡 | **Withdraw to a different chain** — burn on Starknet, Circle attests, USDC mints at an address you name. Built; **not yet run against a real chain** |
 
-**49 Cairo tests** (39 offline, 10 against a forked chain) and **142 TypeScript tests**, run on every push.
+**49 Cairo tests** (39 offline, 10 against a forked chain) and **151 TypeScript tests**, run on every push.
 
 ## Why this exists
 
@@ -70,9 +70,11 @@ repository, and the place to check it:
 | **Say it where it is read** | Caveats sit at the moment of action, not in a footnote — the weaker of the two connection paths carries its warning on the screen where you choose it, while your wallet prompt is open |
 | **Do not overclaim, in either direction** | Cross-chain deposits are built but have never run against a real chain, and the interface says exactly that. Understating working features is also a form of lying |
 
-The last one is the one that costs something. It would be easy to describe this
-as a finished cross-chain privacy hub; the honest description is narrower and
-less impressive, and it is the one on this page.
+The last one is the one that costs something, and it cuts both ways. It would be
+easy to describe this as a finished cross-chain privacy hub — both legs of the
+round trip are written and the interface is complete. The honest description is
+that no transfer has yet moved real money through either of them, and that is
+the description on this page until one has.
 
 ## What is and isn't private
 
