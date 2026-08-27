@@ -1,0 +1,5 @@
+# Written by pnpm when it needs a decision about a dependency's install script.
+# esbuild's postinstall fetches the platform binary it needs to run at all, so
+# it is allowed; left as pnpm's placeholder string, install prompts forever.
+allowBuilds:
+  esbuild: true
