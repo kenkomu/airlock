@@ -46,7 +46,7 @@
      serving both meant the selected segment came out 2.90:1. */
   --accent-fill: #26b6cf;
   --accent-grad-a: #2ec3dc;
-  --accent-grad-b: #1a8298;
+  --accent-grad-b: #1c8ca4; /* 4.62:1 with --on-accent */
   --accent-grad-a-hi: #46d2e9;
   --accent-grad-b-hi: #2196ad;
   --accent-glow: rgba(38, 182, 207, 0.75);
@@ -153,9 +153,9 @@
     --seg-3: #13a0bc; /* 3.09:1 */
     --seg-solo: #8d9dab;
     --accent-grad-a: #2ab3cc;
-    --accent-grad-b: #0d7d92;
+    --accent-grad-b: #0f8da5; /* 4.62:1 with --on-accent */
     --accent-grad-a-hi: #21a3bb;
-    --accent-grad-b-hi: #0a6a7c;
+    --accent-grad-b-hi: #0d8ea6; /* 4.65:1 with --on-accent */
     --accent-glow: rgba(13, 125, 146, 0.28);
 
     /* Re-picked, not reused. Dark-mode amber on white is roughly 2:1. */
@@ -196,9 +196,9 @@
   --seg-3: #13a0bc; /* 3.09:1 */
   --seg-solo: #8d9dab;
   --accent-grad-a: #2ab3cc;
-  --accent-grad-b: #0d7d92;
+  --accent-grad-b: #0f8da5; /* 4.62:1 with --on-accent */
   --accent-grad-a-hi: #21a3bb;
-  --accent-grad-b-hi: #0a6a7c;
+  --accent-grad-b-hi: #0d8ea6; /* 4.65:1 with --on-accent */
   --accent-glow: rgba(13, 125, 146, 0.28);
 
   --sealed: #2f7d52;
