@@ -73,7 +73,10 @@ export async function runWithdraw(args: RunWithdrawArgs): Promise<WithdrawResult
     import('../../vendor/bridge-core/src/core/config'),
   ]);
 
-  initBridgeConfig({ dev: false, prod: true, vars: { NETWORK: 'mainnet' } });
+  /* Same switch as the deposit — the two legs of one round trip must never run
+     against different chains. */
+  const { bridgeNetwork } = await import('./deposit');
+  initBridgeConfig({ dev: false, prod: true, vars: { NETWORK: bridgeNetwork() } });
 
   return cashOut({
     /* Called once on a fresh burn and never on a resume — re-signing a resumed

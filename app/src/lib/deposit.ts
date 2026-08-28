@@ -30,12 +30,42 @@ export type { MoveStep, StepStatus };
  * pool, the CCTP contracts, the anonymizers, native USDC — which is why this is
  * short. `NETWORK` is the one that matters: unset means testnet, so mainnet has
  * to be asked for explicitly, and that default is the safe way round. */
-/* Same endpoint the rest of the app reads mainnet through. */
-const MAINNET_RPC = 'https://api.cartridge.gg/x/starknet/mainnet';
+/* Which chain the bridge legs run against.
+ *
+ * Hardcoded to mainnet until now, which made a free rehearsal impossible — the
+ * one thing you want before moving real money through code that has never run.
+ *
+ * Mainnet is the default because that is what the deployed site must do, and a
+ * build that silently pointed at testnet would show a live-looking interface
+ * reading the wrong chain. Testnet is opted into explicitly, at build time:
+ *
+ *   VITE_AIRLOCK_BRIDGE_NETWORK=testnet pnpm dev
+ *
+ * Anything other than the two known values is a typo, and typos here choose a
+ * chain — so it fails loudly rather than falling back to a default that spends
+ * real money. */
+export type BridgeNetwork = 'mainnet' | 'testnet';
+
+export function bridgeNetwork(): BridgeNetwork {
+  const raw = (import.meta.env.VITE_AIRLOCK_BRIDGE_NETWORK ?? '').trim().toLowerCase();
+  if (raw === '') return 'mainnet';
+  if (raw === 'mainnet' || raw === 'testnet') return raw;
+  throw new Error(
+    `VITE_AIRLOCK_BRIDGE_NETWORK must be 'mainnet' or 'testnet' (got ${JSON.stringify(raw)}).`,
+  );
+}
+
+/* The endpoint the account-deploy check reads. Follows the same choice, or the
+   deploy would look for an account on a chain the deposit never touches. */
+export function bridgeRpcUrl(net: BridgeNetwork = bridgeNetwork()): string {
+  return net === 'mainnet'
+    ? 'https://api.cartridge.gg/x/starknet/mainnet'
+    : 'https://api.cartridge.gg/x/starknet/sepolia';
+}
 
 function bridgeVars(): Record<string, string | undefined> {
   return {
-    NETWORK: 'mainnet',
+    NETWORK: bridgeNetwork(),
   };
 }
 
@@ -95,6 +125,8 @@ export function asNeedsGas(err: unknown): NeedsGas | null {
  * deploy is zero-fee. */
 export const DEPLOY_GAS_WEI = 500_000_000_000_000_000n; // 0.5 STRK
 
+/* Identical on mainnet and Sepolia — one of the few addresses that is, which is
+   why this needs no network switch. */
 const STRK_TOKEN =
   '0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d';
 
@@ -122,7 +154,7 @@ export async function ensureDerivedAccountDeployed(
     await Promise.all([import('starknet'), import('./identity')]);
 
   const identity = deriveIdentity(signature, OZ_ACCOUNT_CLASS_HASH);
-  const provider = new RpcProvider({ nodeUrl: MAINNET_RPC });
+  const provider = new RpcProvider({ nodeUrl: bridgeRpcUrl() });
 
   try {
     await provider.getClassHashAt(identity.address);
