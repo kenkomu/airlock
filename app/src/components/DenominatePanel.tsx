@@ -81,6 +81,15 @@ export function DenominatePanel({
     session.state.phase === 'connected' ? '' : '8.4',
   );
   const [legs, setLegs] = useState<bigint[] | null>(null);
+  /* Whether a plan is in flight AND has been long enough to be worth saying so.
+     Two pieces of state rather than one: a skeleton that flashes for 80ms is
+     worse than no skeleton, so `planning` starts immediately and `slowPlan`
+     only follows if the wait outlives the delay below. */
+  const [slowPlan, setSlowPlan] = useState(false);
+  /* A plan that has taken so long something is probably wrong. A skeleton is a
+     promise that an answer is arriving; past a certain wait that promise stops
+     being true, and an endless shimmer is worse than saying so. */
+  const [stalledPlan, setStalledPlan] = useState(false);
   const [planError, setPlanError] = useState<string | null>(null);
   const [stage, setStage] = useState<Stage>({ at: 'idle' });
 
@@ -122,9 +131,26 @@ export function DenominatePanel({
     if (!bucketer || amount === null || amount <= 0n) {
       setLegs(null);
       setPlanError(null);
+      setSlowPlan(false);
+      setStalledPlan(false);
       return;
     }
     let cancelled = false;
+    /* Measured against the deployed contract: plan() runs 382-732ms, median
+       517, and the debounce below adds 250 — about three quarters of a second
+       from keystroke to answer. Long enough that the figure vanishing with no
+       replacement reads as breakage, which is what it did.
+
+       SLOW_AT is deliberately shorter than that median, so the skeleton is up
+       for most of a typical wait, but long enough that a fast answer or a
+       cached one never flashes it. */
+    setStalledPlan(false);
+    const slow = setTimeout(() => { if (!cancelled) setSlowPlan(true); }, 220);
+    /* There is no timeout on the RPC itself, so without this a hung endpoint
+       leaves the skeleton shimmering indefinitely — which happened while
+       testing this, against a live node. Eight seconds is far past the 732ms
+       worst case measured against the contract. */
+    const stall = setTimeout(() => { if (!cancelled) setStalledPlan(true); }, 8000);
     const t = setTimeout(async () => {
       try {
         const l = await fetchPlan(conn?.provider ?? providerFor(network), bucketer.address, amount);
@@ -134,9 +160,16 @@ export function DenominatePanel({
           setLegs(null);
           setPlanError('Not on the ladder — no combination of standard denominations makes this figure.');
         }
+      } finally {
+        if (!cancelled) { setSlowPlan(false); setStalledPlan(false); }
       }
     }, 250);
-    return () => { cancelled = true; clearTimeout(t); };
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+      clearTimeout(slow);
+      clearTimeout(stall);
+    };
   }, [conn, network, bucketer, amount]);
 
   /* The example must not survive into the connected state: it is illustrative,
@@ -350,6 +383,21 @@ export function DenominatePanel({
         <SplitBar legs={legs} amount={amount} bucketer={bucketer} sizes={sizes} />
       )}
 
+      {/* Holds the figure's place while the contract is answering. Same rows,
+          same heights, so the real answer replaces it without the page moving —
+          a skeleton that shifts the layout has given back what it was for. */}
+      {!legs && slowPlan && !stalledPlan && !planError && <SplitSkeleton />}
+
+      {/* The skeleton's promise has expired. Says which side is slow, because
+          "the contract is slow to answer" and "you typed something wrong" are
+          different problems and only one of them is the user's. */}
+      {!legs && stalledPlan && !planError && (
+        <p className="sm muted" aria-live="polite">
+          The contract is slow to answer — still waiting. Nothing is wrong with
+          the amount you typed.
+        </p>
+      )}
+
       <p className="muted sm">
         Standard sizes:{' '}
         {[1000n, 500n, 250n, 100n, 50n, 25n, 10n, 5n, 1n]
@@ -521,6 +569,54 @@ function AmountLede({
           : 'just one address in the pool has moved it'}
       . Try any amount.
     </p>
+  );
+}
+
+/* The figure's silhouette, while the contract is being asked.
+ *
+ * Mirrors SplitBar row for row rather than being a generic grey block: the
+ * point of a skeleton is that the shape you are waiting for is already there,
+ * so the answer lands into a space the eye has settled on. A spinner here would
+ * say "something is happening" and nothing about what.
+ *
+ * aria-hidden, with the live region below carrying the words — a screen reader
+ * gains nothing from three grey rectangles, and announcing them competes with
+ * the answer that is about to arrive. */
+function SplitSkeleton() {
+  return (
+    <figure className="splitfig splitfig-skel" aria-hidden="true">
+      <div className="splitfig-row">
+        <span className="splitfig-k">You withdraw</span>
+        <div className="splitbar">
+          {/* `flex: 1` is load-bearing. `.splitbar` is a flex row, so a child
+              with no flex and no width collapses to nothing — the bar rendered
+              invisible until this was added, while the segmented row below
+              worked because its pieces carry flex values of their own. */}
+          <div className="skel skel-flat" style={{ flex: 1 }} />
+        </div>
+        <span className="splitfig-v skel skel-flat skel-v" />
+      </div>
+      <div className="splitfig-row">
+        <span className="splitfig-k">Anyone watching sees</span>
+        <div className="splitbar splitbar-skel">
+          <div className="skel skel-flat" style={{ flex: 3 }} />
+          <div className="skel skel-flat" style={{ flex: 2 }} />
+          <div className="skel skel-flat" style={{ flex: 1 }} />
+        </div>
+        <span className="splitfig-v skel skel-flat skel-v" />
+      </div>
+      <figcaption className="splitfig-cap">
+        <div className="splitkeys">
+          <span className="skel skel-flat skel-pill" />
+          <span className="skel skel-flat skel-pill" />
+          <span className="skel skel-flat skel-pill" />
+        </div>
+        {/* The crowd verdict's line. Omitting it cost 29px of layout shift when
+            the real figure arrived — measured, not guessed — which is precisely
+            what a skeleton is for. */}
+        <span className="skel skel-line" />
+      </figcaption>
+    </figure>
   );
 }
 

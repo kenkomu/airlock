@@ -11,6 +11,7 @@ import { useState } from 'react';
 import type { WithdrawSession } from '../hooks/useWithdraw';
 import { WITHDRAW_STEPS, isEvmAddress } from '../lib/withdraw';
 import { IconArrowRight } from './Icons';
+import { Copyable } from './Copyable';
 
 const LABEL: Record<string, string> = {
   burn: 'Leave the pool',
@@ -48,8 +49,8 @@ export function WithdrawPanel({
         <h4 className="dep-h">An earlier withdrawal is still on its way</h4>
         <p className="sm">
           Money is already travelling to{' '}
-          <span className="mono dep-tx">{state.destination}</span>. It cannot be
-          redirected — the burn is committed.
+          <Copyable value={state.destination} short={state.destination} label="the destination" />.
+          It cannot be redirected — the burn is committed.
         </p>
         <p className="sm muted">
           To finish it, ask for that same address again. Sending to a different
@@ -74,8 +75,9 @@ export function WithdrawPanel({
       <div className="dep dep-done">
         <h4 className="dep-h">Arrived on {chainName}</h4>
         <p className="sm">
-          Sent to <span className="mono dep-tx">{state.destination}</span>. Nothing
-          on chain links it to where the money came in.
+          Sent to{' '}
+          <Copyable value={state.destination} short={state.destination} label="the destination" />.
+          Nothing on chain links it to where the money came in.
         </p>
         <button type="button" className="btn btn-sm" onClick={reset}>
           Done
@@ -132,6 +134,13 @@ export function WithdrawPanel({
           </p>
         )}
       </div>
+
+      {state.phase === 'loading' && (
+        <p className="door-step">
+          <span className="door-spin" aria-hidden="true" />
+          Getting things ready…
+        </p>
+      )}
 
       {(state.phase === 'running' || state.phase === 'loading') && (
         <ol className="dep-list">

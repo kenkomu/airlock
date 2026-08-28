@@ -14,6 +14,7 @@
 
 import { DEPOSIT_STEPS, type DepositSession, type StepState } from '../hooks/useDeposit';
 import type { MoveStep } from '../lib/deposit';
+import { Copyable } from './Copyable';
 
 const LABEL: Record<MoveStep, string> = {
   deploy: 'Create your Starknet account',
@@ -71,7 +72,9 @@ export function DepositSteps({ session }: { session: DepositSession }) {
           is the only fee in the whole round trip — moving in, splitting and
           moving out are all free after it.
         </p>
-        <p className="sm mono dep-tx">{state.address}</p>
+        <p className="dep-tx">
+          <Copyable value={state.address} short={state.address} label="your Starknet account" />
+        </p>
         <p className="sm muted">
           It is your account, derived from your signature. Anything left over
           stays there, and the same signature reaches it again from any device.
@@ -92,7 +95,9 @@ export function DepositSteps({ session }: { session: DepositSession }) {
           withdraw — that is what stops the amount identifying you.
         </p>
         {state.burnTxHash && (
-          <p className="sm muted mono dep-tx">{state.burnTxHash}</p>
+          <p className="dep-tx">
+            <Copyable value={state.burnTxHash} short={state.burnTxHash} label="the transaction hash" />
+          </p>
         )}
         <button type="button" className="btn btn-sm" onClick={reset}>
           Done
@@ -109,7 +114,16 @@ export function DepositSteps({ session }: { session: DepositSession }) {
 
   return (
     <div className="dep">
-      {state.phase === 'loading' && <p className="sm muted">Getting ready…</p>}
+      {/* A spinner, not a skeleton. The research line is content vs action: a
+          skeleton stands in for a shape that is coming, and nothing is coming
+          here — this is the engine chunk being fetched before any step exists.
+          Naming what it is waiting for beats a bare "Loading". */}
+      {state.phase === 'loading' && (
+        <p className="door-step">
+          <span className="door-spin" aria-hidden="true" />
+          Getting things ready…
+        </p>
+      )}
 
       {state.phase === 'running' && state.note && (
         <p className="sm muted">{state.note}</p>

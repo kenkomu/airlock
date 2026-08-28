@@ -13,6 +13,7 @@
 
 import type { EvmIdentitySession } from '../hooks/useEvmIdentity';
 import { shortEvmAddress } from '../lib/evm';
+import { Copyable } from './Copyable';
 import { shortAddress } from '../lib/identity';
 
 export function EvmDoor({
@@ -31,14 +32,29 @@ export function EvmDoor({
         <dl className="door-id">
           <div>
             <dt>{identity.walletName}</dt>
-            <dd className="mono">{shortEvmAddress(identity.evmAddress)}</dd>
+            <dd>
+              <Copyable
+                value={identity.evmAddress}
+                short={shortEvmAddress(identity.evmAddress)}
+                label="your wallet address"
+              />
+            </dd>
           </div>
           <div>
             <dt>Your Starknet account</dt>
             {/* Shown before anything is spent. It is the one thing the user can
                 check against another tool, and an address you cannot verify is
                 one you have to take our word for. */}
-            <dd className="mono">{shortAddress(identity.starknetAddress)}</dd>
+            <dd>
+              {/* The one address a user has to act on — it is where they send
+                  the gas that creates the account. Truncated and uncopyable, the
+                  only way to get it was to retype what was on screen. */}
+              <Copyable
+                value={identity.starknetAddress}
+                short={shortAddress(identity.starknetAddress)}
+                label="your Starknet account"
+              />
+            </dd>
           </div>
         </dl>
 

@@ -2869,3 +2869,113 @@ body {
   flex-direction: column;
   gap: var(--s3);
 }
+
+/* ---------- the split figure's skeleton ----------
+ *
+ * Reuses `.skel` so there is one shimmer in the app, one duration, and one
+ * place the reduced-motion rule has to reach. The modifiers below only change
+ * shape, never the animation.
+ */
+.skel-flat {
+  height: 100%;
+  border-radius: inherit;
+}
+/* The numeric readouts at the end of each row. Sized to the digits they stand
+   in for, so the row does not resize when the real figure arrives. */
+.skel-v {
+  height: 12px;
+  width: 68px;
+  border-radius: var(--r-sm);
+}
+.skel-pill {
+  height: 20px;
+  width: 62px;
+  border-radius: 999px;
+}
+/* Segments, so the second row reads as a split rather than one long bar —
+   the shape is the whole message. */
+.splitbar-skel {
+  display: flex;
+  gap: 3px;
+}
+/* Slightly recessed, so it never competes with a real answer still on screen
+   elsewhere in the panel. */
+.splitfig-skel {
+  opacity: 0.7;
+}
+
+/* Stands in for the crowd verdict's sentence under the pills. */
+.skel-line {
+  height: 13px;
+  width: 78%;
+  border-radius: var(--r-sm);
+}
+
+/* ---------- copyable addresses ----------
+ *
+ * A button, not decorated text: it does something, so it has to look and behave
+ * like a control — focusable, hoverable, and reachable by keyboard.
+ */
+.copy {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s2);
+  max-width: 100%;
+  padding: 3px var(--s2);
+  margin: -3px calc(var(--s2) * -1);
+  border: none;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  transition: background var(--t), color var(--t);
+}
+.copy:hover {
+  background: var(--surface-3);
+}
+.copy-text {
+  white-space: nowrap;
+  text-align: left;
+}
+.copy-text-wrap {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+/* Dim until wanted, so a row of addresses does not read as a row of buttons —
+   but it comes to full strength on hover and on keyboard focus, and it is
+   always in the tab order regardless. */
+.copy-icon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  color: var(--text-3);
+  transition: color var(--t);
+}
+.copy:hover .copy-icon,
+.copy:focus-visible .copy-icon {
+  color: var(--accent);
+}
+.copy-done {
+  color: var(--accent);
+}
+.copy-done .copy-icon {
+  color: var(--accent);
+}
+/* Clipboard refused. The whole value, selectable, rather than a button that
+   quietly did nothing. */
+.copy-revealed {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.copy-full {
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+@media (pointer: coarse) {
+  /* Comfortable to hit with a thumb; this is the control people reach for on a
+     phone, to paste an address into a wallet app. */
+  .copy {
+    min-height: 44px;
+  }
+}
