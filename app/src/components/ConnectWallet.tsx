@@ -147,11 +147,39 @@ export function ConnectWallet({
     );
   }
 
+  /* Connected through the other door.
+     *
+     * The header was showing an account badge AND a "Connect wallet" button at
+     * the same time, which reads as a contradiction: one says you are in, the
+     * other says you are not. This branch mirrors what the Starknet door does —
+     * the button becomes the account, and opening it is how you reach the
+     * details and the way out. */
+  /* The identity itself, not a boolean — a flag does not narrow the union, so
+     the fields below would be unreachable to the type checker. */
+  const evmIdentity =
+    evmSession.state.phase === 'ready' ? evmSession.state.identity : null;
+
   return (
     <>
-      <button type="button" className="btn" onClick={() => setOpen(true)}>
-        <IconWallet /> Connect wallet
-      </button>
+      {evmIdentity ? (
+        <button
+          type="button"
+          className="addr-pill"
+          onClick={() => setOpen(true)}
+          aria-haspopup="dialog"
+          title={`${evmIdentity.starknetAddress} — your derived account`}
+        >
+          {/* Amber, not green: this account is derived in the browser and is not
+              active until its first deposit. The dot is the one place that
+              difference is visible at a glance from anywhere on the page. */}
+          <span className="addr-dot addr-dot-warn" />
+          <span className="mono">{shortAddress(evmIdentity.starknetAddress)}</span>
+        </button>
+      ) : (
+        <button type="button" className="btn" onClick={() => setOpen(true)}>
+          <IconWallet /> Connect wallet
+        </button>
+      )}
 
       {open && (
         <div
@@ -446,11 +474,12 @@ export function NetworkBadge({
        * is the page's answer to "am I in?", and it was answering about the
        * wrong door. */
     if (evmSession?.state.phase === 'ready') {
-      return (
-        <span className="badge badge-net mono" title={evmSession.state.identity.starknetAddress}>
-          {shortAddress(evmSession.state.identity.starknetAddress)}
-        </span>
-      );
+      /* The network, not the address. This badge answers "which chain" for the
+         Starknet door while the button beside it carries the account — showing
+         the address in both put the same string twice in one corner and left
+         no room for the question the badge exists to answer. The derived
+         account lives on Starknet mainnet by construction. */
+      return <span className="badge badge-net mono">MAINNET</span>;
     }
     return <span className="badge badge-net mono">NOT CONNECTED</span>;
   }
