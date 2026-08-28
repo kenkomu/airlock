@@ -15,6 +15,7 @@ import { AccountSheet } from './AccountSheet';
 import { EvmDoor } from './EvmDoor';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import type { EvmIdentitySession } from '../hooks/useEvmIdentity';
+import { shortAddress } from '../lib/identity';
 import { walletRows } from '../lib/walletRows';
 
 /* Open state is owned by the page, because the primary CTA in the transfer card
@@ -193,7 +194,19 @@ export function ConnectWallet({
                 to the moment it is actionable — the confirm step after choosing
                 an EVM wallet, where it is read instead of scrolled past. */}
             {evmSession.state.phase !== 'idle' ? (
-              <EvmDoor session={evmSession} busy={connecting} />
+              <EvmDoor
+                session={evmSession}
+                busy={connecting}
+                onDone={() => {
+                  setOpen(false);
+                  /* Take them to the panel rather than leaving them to find it.
+                     The sheet closes onto a page they have not scrolled, and the
+                     thing they just set up an account for is below the fold. */
+                  document
+                    .querySelector('.next-up')
+                    ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }}
+              />
             ) : (
               <>
                 {rows.length > 0 && (
@@ -417,8 +430,28 @@ export function WalletNotice({ session }: { session: WalletSession }) {
  * takes you somewhere unfinished. It now always moves; whether the destination
  * has an anonymizer is said out loud instead.
  */
-export function NetworkBadge({ session }: { session: WalletSession }) {
+export function NetworkBadge({
+  session,
+  evmSession,
+}: {
+  session: WalletSession;
+  evmSession?: EvmIdentitySession;
+}) {
   if (session.state.phase !== 'connected') {
+    /* The other door counts as connected too.
+       *
+       * This read only the Starknet session, so someone who came in through the
+       * any-chain door — derived an account, saw its address, ready to move
+       * money — was told NOT CONNECTED by the header the whole time. The badge
+       * is the page's answer to "am I in?", and it was answering about the
+       * wrong door. */
+    if (evmSession?.state.phase === 'ready') {
+      return (
+        <span className="badge badge-net mono" title={evmSession.state.identity.starknetAddress}>
+          {shortAddress(evmSession.state.identity.starknetAddress)}
+        </span>
+      );
+    }
     return <span className="badge badge-net mono">NOT CONNECTED</span>;
   }
   const { network, chainId, wallet } = session.state.conn;

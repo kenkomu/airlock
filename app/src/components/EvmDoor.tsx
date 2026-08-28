@@ -19,9 +19,13 @@ import { shortAddress } from '../lib/identity';
 export function EvmDoor({
   session,
   busy,
+  onDone,
 }: {
   session: EvmIdentitySession;
   busy: boolean;
+  /* Closes the sheet and takes the user to the thing they came to do. Without
+     it this screen was a cul-de-sac: an address, a warning, and no way on. */
+  onDone?: () => void;
 }) {
   const { state, forget } = session;
 
@@ -58,21 +62,31 @@ export function EvmDoor({
           </div>
         </dl>
 
-        {/* Trimmed to the two facts that change what someone does next: the
-            account cannot receive yet, and the keys are recoverable from the
-            same signature. Everything else was reassurance. */}
+        {/* This said "don't send anything to it", which was true when nothing
+            could act on the account and became actively misleading the moment
+            the deposit flow existed — the first thing that flow needs is a
+            little STRK at exactly this address. Now it says what the account
+            is waiting for instead of warning against the one action that
+            unblocks it. */}
         <p className="sm door-warn">
-          <b>Not usable yet.</b> Nothing is deployed here and no viewing key is
-          registered — don't send anything to it.
+          <b>Not active yet.</b> It comes to life with your first deposit, which
+          pays a one-off fee to create the account on Starknet.
         </p>
         <p className="sm muted">
           Sign the same message again and you get this account back. Nothing is
           stored.
         </p>
 
-        <button type="button" className="btn btn-sm" onClick={forget} disabled={busy}>
-          Use a different wallet
-        </button>
+        <div className="door-actions">
+          {onDone && (
+            <button type="button" className="btn btn-primary" onClick={onDone}>
+              Move funds in
+            </button>
+          )}
+          <button type="button" className="btn btn-sm" onClick={forget} disabled={busy}>
+            Use a different wallet
+          </button>
+        </div>
       </div>
     );
   }

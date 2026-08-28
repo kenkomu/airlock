@@ -65,7 +65,7 @@ export default function App() {
         </div>
         <div className="top-right">
           <ThemeToggle />
-          <NetworkBadge session={session} />
+          <NetworkBadge session={session} evmSession={evmSession} />
           <ConnectWallet
             session={session}
             evmSession={evmSession}

@@ -2979,3 +2979,11 @@ body {
     min-height: 44px;
   }
 }
+
+/* Primary action first, the escape hatch after it. */
+.door-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2);
+  align-items: center;
+}
