@@ -15,7 +15,9 @@
 
 import { useCallback, useRef, useState } from 'react';
 import {
+  asNeedsGas,
   asPendingDeposit,
+  ensureDerivedAccountDeployed,
   runDeposit,
   type MoveStep,
   type StepStatus,
@@ -33,9 +35,13 @@ export type DepositPhase =
   /* The engine is being fetched. Its own step, because on a slow connection it
      is a second or two of nothing and the user has just clicked something. */
   | { phase: 'loading' }
-  | { phase: 'running'; steps: StepState; burnTxHash?: string }
+  | { phase: 'running'; steps: StepState; burnTxHash?: string; note?: string }
   /* Interrupted: money already moved, deposit not finished. */
   | { phase: 'pending'; pendingNetWei: bigint }
+  /* The account does not exist yet and cannot pay to create itself. The only
+     thing that unblocks this is the user sending STRK to the named address, so
+     it is a state with an address in it rather than an error string. */
+  | { phase: 'needs-gas'; address: string; needWei: bigint }
   | { phase: 'done'; depositedNetWei: bigint; burnTxHash?: string }
   | { phase: 'error'; message: string; steps: StepState };
 
@@ -72,6 +78,16 @@ export function useDeposit(deps: DepositDeps): DepositSession {
 
       try {
         const signature = await deps.getSignature();
+
+        /* Create the account first, out of its own STRK, when nothing is there.
+           The engine cannot: its only deploy paths are an AVNU sponsorship that
+           needs a key a static site must not hold, and a treasury key that
+           production builds correctly refuse. Everything after this is zero-fee,
+           so this is the single moment money is needed for gas. */
+        await ensureDerivedAccountDeployed(signature, (msg) => {
+          setState({ phase: 'running', steps: steps.current, note: msg });
+        });
+
         setState({ phase: 'running', steps: {} });
 
         const result = await runDeposit({
@@ -102,6 +118,11 @@ export function useDeposit(deps: DepositDeps): DepositSession {
           burnTxHash: burn.current,
         });
       } catch (e) {
+        const gas = asNeedsGas(e);
+        if (gas) {
+          setState({ phase: 'needs-gas', address: gas.address, needWei: gas.needWei });
+          return;
+        }
         const interrupted = asPendingDeposit(e);
         if (interrupted) {
           setState({ phase: 'pending', pendingNetWei: interrupted.pendingNetWei });

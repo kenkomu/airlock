@@ -60,3 +60,41 @@ describe('asPendingDeposit', () => {
     expect(asPendingDeposit(err)?.pendingNetWei).toBe(0n);
   });
 });
+
+describe('asNeedsGas', () => {
+  it('recognises an account that cannot pay to create itself', async () => {
+    /* Carries the address, because sending STRK there is the only thing that
+       unblocks it — an error string with no address would be a dead end. */
+    const { asNeedsGas } = await import('../deposit');
+    const err = new Error('needs gas') as Error & {
+      code: string;
+      address: string;
+      needWei: bigint;
+    };
+    err.code = 'AIRLOCK_DEPLOY_NEEDS_GAS';
+    err.address = '0x0672abc';
+    err.needWei = 500_000_000_000_000_000n;
+    const found = asNeedsGas(err);
+    expect(found?.address).toBe('0x0672abc');
+    expect(found?.needWei).toBe(500_000_000_000_000_000n);
+  });
+
+  it('does not confuse it with the interrupted-deposit error', async () => {
+    /* The two are both "not an ordinary failure" but lead to opposite actions:
+       one says send gas, the other says continue a transfer already in flight. */
+    const { asNeedsGas, asPendingDeposit } = await import('../deposit');
+    const pending = new Error('in progress') as Error & { code: string };
+    pending.code = 'PENDING_POOL_DEPOSIT';
+    expect(asNeedsGas(pending)).toBeNull();
+
+    const gas = new Error('needs gas') as Error & { code: string };
+    gas.code = 'AIRLOCK_DEPLOY_NEEDS_GAS';
+    expect(asPendingDeposit(gas)).toBeNull();
+  });
+
+  it('stays null for ordinary failures', async () => {
+    const { asNeedsGas } = await import('../deposit');
+    expect(asNeedsGas(new Error('network request failed'))).toBeNull();
+    expect(asNeedsGas(null)).toBeNull();
+  });
+});

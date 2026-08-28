@@ -30,6 +30,9 @@ export type { MoveStep, StepStatus };
  * pool, the CCTP contracts, the anonymizers, native USDC — which is why this is
  * short. `NETWORK` is the one that matters: unset means testnet, so mainnet has
  * to be asked for explicitly, and that default is the safe way round. */
+/* Same endpoint the rest of the app reads mainnet through. */
+const MAINNET_RPC = 'https://api.cartridge.gg/x/starknet/mainnet';
+
 function bridgeVars(): Record<string, string | undefined> {
   return {
     NETWORK: 'mainnet',
@@ -68,6 +71,103 @@ export interface RunDepositArgs {
 export interface DepositResult {
   depositedNetWei: bigint;
   deposited: boolean;
+}
+
+/* The account is not there yet, and nobody has offered to pay for it. */
+export interface NeedsGas {
+  address: string;
+  /* Base units of STRK, 18 decimals. */
+  needWei: bigint;
+}
+
+export function asNeedsGas(err: unknown): NeedsGas | null {
+  const e = err as { code?: string; address?: string; needWei?: bigint } | null;
+  if (e?.code !== 'AIRLOCK_DEPLOY_NEEDS_GAS') return null;
+  return { address: e.address ?? '', needWei: e.needWei ?? 0n };
+}
+
+/* What a one-time account deployment costs, with room to spare.
+ *
+ * The engine's own display estimate is 0.5 STRK. Asking for that rather than a
+ * tight estimate is deliberate: an under-funded account fails mid-deploy, and
+ * the remedy is another transfer and another wait. Whatever is left over stays
+ * in the account and is not consumed by anything else — every leg after the
+ * deploy is zero-fee. */
+export const DEPLOY_GAS_WEI = 500_000_000_000_000_000n; // 0.5 STRK
+
+const STRK_TOKEN =
+  '0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d';
+
+/* Deploy the derived account, paid out of its own STRK.
+ *
+ * This exists because the engine cannot deploy without a sponsor. Its own path
+ * prefers AVNU's SNIP-29 sponsored deploy, and AVNU requires a whitelisted API
+ * key — which a static site cannot hold, because anyone could read it out of the
+ * bundle and drain the sponsorship. Its other path funds from a development
+ * treasury key, which config.ts hard-fails in any production build, correctly.
+ *
+ * So the honest third option: the user pays, once, for their own account. It is
+ * the only fee in the whole lifecycle — register, deposit and withdraw are all
+ * proven legs and cost nothing — and it buys an account that is theirs,
+ * recoverable from the same signature on any device.
+ *
+ * The payload matches the engine's exactly (class hash, [publicKey] calldata,
+ * publicKey as salt). It has to: a different salt is a different address, and the
+ * money would arrive somewhere the app would never look. */
+export async function ensureDerivedAccountDeployed(
+  signature: string,
+  onStatus?: (msg: string) => void,
+): Promise<{ address: string; deployedNow: boolean; txHash?: string }> {
+  const [{ Account, RpcProvider, CallData }, { deriveIdentity, OZ_ACCOUNT_CLASS_HASH }] =
+    await Promise.all([import('starknet'), import('./identity')]);
+
+  const identity = deriveIdentity(signature, OZ_ACCOUNT_CLASS_HASH);
+  const provider = new RpcProvider({ nodeUrl: MAINNET_RPC });
+
+  try {
+    await provider.getClassHashAt(identity.address);
+    return { address: identity.address, deployedNow: false };
+  } catch {
+    /* Nothing at the address yet — the normal case for a first-time user, not an
+       error. Fall through and deploy. */
+  }
+
+  onStatus?.('Checking your account can pay for itself…');
+  const balance = await provider.callContract({
+    contractAddress: STRK_TOKEN,
+    entrypoint: 'balance_of',
+    calldata: CallData.compile([identity.address]),
+  });
+  const held = BigInt(balance[0] ?? '0x0');
+
+  if (held < DEPLOY_GAS_WEI) {
+    /* Fail before touching the wallet. The user needs to do something on another
+       screen, and telling them that now is better than after a signature. */
+    const err = new Error(
+      'This account needs a little STRK to create itself.',
+    ) as Error & { code: string; address: string; needWei: bigint };
+    err.code = 'AIRLOCK_DEPLOY_NEEDS_GAS';
+    err.address = identity.address;
+    err.needWei = DEPLOY_GAS_WEI - held;
+    throw err;
+  }
+
+  onStatus?.('Creating your Starknet account…');
+  /* Options object, not positional — starknet 10 changed the constructor, and
+     the positional form silently typechecks nowhere but reads plausibly. */
+  const account = new Account({
+    provider,
+    address: identity.address,
+    signer: identity.privateKey,
+    cairoVersion: '1',
+  });
+  const { transaction_hash } = await account.deployAccount({
+    classHash: OZ_ACCOUNT_CLASS_HASH,
+    constructorCalldata: [identity.publicKey],
+    addressSalt: identity.publicKey,
+  });
+  await provider.waitForTransaction(transaction_hash);
+  return { address: identity.address, deployedNow: true, txHash: transaction_hash };
 }
 
 /* Load the engine, initialise it, and run one deposit.

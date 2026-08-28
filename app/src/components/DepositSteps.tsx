@@ -61,6 +61,28 @@ export function DepositSteps({ session }: { session: DepositSession }) {
     );
   }
 
+  if (state.phase === 'needs-gas') {
+    const strk = (Number(state.needWei) / 1e18).toFixed(2);
+    return (
+      <div className="dep dep-pending" role="alert">
+        <h4 className="dep-h">Your account needs creating first</h4>
+        <p className="sm">
+          Send about <b>{strk} STRK</b> to the address below and press again. This
+          is the only fee in the whole round trip — moving in, splitting and
+          moving out are all free after it.
+        </p>
+        <p className="sm mono dep-tx">{state.address}</p>
+        <p className="sm muted">
+          It is your account, derived from your signature. Anything left over
+          stays there, and the same signature reaches it again from any device.
+        </p>
+        <button type="button" className="btn btn-sm" onClick={reset}>
+          I have sent it
+        </button>
+      </div>
+    );
+  }
+
   if (state.phase === 'done') {
     return (
       <div className="dep dep-done">
@@ -87,8 +109,10 @@ export function DepositSteps({ session }: { session: DepositSession }) {
 
   return (
     <div className="dep">
-      {state.phase === 'loading' && (
-        <p className="sm muted">Getting ready…</p>
+      {state.phase === 'loading' && <p className="sm muted">Getting ready…</p>}
+
+      {state.phase === 'running' && state.note && (
+        <p className="sm muted">{state.note}</p>
       )}
 
       {state.phase === 'error' && (
