@@ -108,7 +108,15 @@ function groupLegs(legs: number[]): { d: number; n: number }[] {
 export function TransferPanel({ onChange, session, evmSession, onConnect }: Props) {
   const [fromId, setFromId] = useState(137);
   const [toId, setToId] = useState(42161);
-  const [raw, setRaw] = useState('847.32');
+  /* Empty, not a worked example.
+     *
+     * This defaulted to '847.32' to illustrate the route while the button below
+     * was permanently disabled. The button moves real money now, so a prefilled
+     * amount is a loaded default on a transactional control — the label read
+     * "Make 847.32 USDC private" before anyone had typed anything. The split
+     * panel above still demonstrates the idea with its own default, where
+     * nothing can be spent. */
+  const [raw, setRaw] = useState('');
   const [bucketing, setBucketing] = useState(true);
   const [restMinutes, setRestMinutes] = useState<number>(60 * 6);
   const [touched, setTouched] = useState(false);
