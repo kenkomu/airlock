@@ -11,7 +11,7 @@ the Apache License 2.0 (see [`LICENSE`](./LICENSE)).
 | Package name | `@starkware-libs/starknet-privacy-bridge` |
 | Version | 0.1.19 |
 | Licence | Apache-2.0 |
-| Modified | No — sources are copied unchanged |
+| Modified | **Yes** — four files, listed below |
 
 ## Why it is vendored rather than installed
 
@@ -21,19 +21,26 @@ the licensed way to depend on code we cannot fetch.
 
 ## What is wired up so far
 
-Only `derivation/` and `lib/ethereum.ts`. Those are self-contained — they need
-`starknet` and `@noble/*` and nothing else — which is why this directory costs the
-build nothing today and the production bundle did not move when it landed.
+`derivation/`, `lib/ethereum.ts`, and the `core/` orchestrators — `moveIntoPool`
+(the deposit) and `bridgeOut` (the withdrawal) — which is why `viem` and
+`@starkware-libs/starknet-privacy-sdk` are now in `package.json`. The SDK is
+vendored alongside this directory and mapped by name in `vendorAlias.ts`, so the
+build needs no GitHub Packages credential.
 
-The `core/` orchestrators (`moveIntoPool`, `bridgeOut`, `withdrawToStarknet`, …)
-are present but not yet imported by anything, so their two heavier dependencies —
-`viem` and `@starkware-libs/starknet-privacy-sdk` — are deliberately **not** in
-`package.json` yet. That is not tidiness. The SDK lives on GitHub Packages, which
-needs a credential CI does not have, so declaring it before anything imports it
-would fail `pnpm install --frozen-lockfile` on every push and take the deployed
-demo down to buy nothing. Both get added in the same change that first imports an
-orchestrator, along with the CI auth this repo will then need. The `@starkware-libs`
-registry line in `app/.npmrc` is already there for that day, and is inert until then.
+## Modifications
+
+Apache-2.0 §4(b) asks that changed files say so. Each change is marked inline
+with an `AIRLOCK:` comment at the point of the edit.
+
+| File | Change | Why |
+|---|---|---|
+| `core/config.ts` | `rpcUrl` / `proverUrl` / `indexerUrl` take an absolute-URL override (`STARKNET_RPC_URL`, `PROVER_URL`, `INDEXER_URL`) | Upstream hardcodes same-origin paths — `/rpc`, `/prover`, `/indexer` — which assume a Vite dev proxy or an OHTTP gateway rewrites them. Airlock is a static site with neither, so every engine-side RPC call went to its own origin and failed. |
+| `core/proven-submit.ts` | `getManagerAccount` falls back to an account nominated by the new `setProvenFallbackPayer` | Upstream submits the proven pool legs from an AVNU paymaster or an admin manager. A production build can have neither — `resolveAdmin` returns undefined whenever `prod` is set — so register, deposit and withdraw had no sender at all. The proof binds no sender (`validate_proof` hashes the actions, the pool and its class hash, never an account), so the user's own account is a valid one; it is then the account `collect_fee()` charges. |
+| `core/moveIntoPool.ts` | Calls `setProvenFallbackPayer` once the user's key is derived | Same reason — the deposit needs a payer. |
+| `core/bridgeOut.ts` | Same, at both derivation sites | Same reason — the withdrawal needs a payer. |
+
+A configured paymaster or admin still wins over the fallback, so turning either
+on later needs no change here.
 
 ## What was left out
 

@@ -42,7 +42,7 @@ const STRK_TOKEN = '0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f428
 const TIMEOUT = 180_000;
 
 describe.skipIf(!LIVE)('ensureDerivedAccountDeployed, against Sepolia', () => {
-  let identity: { address: string; publicKey: string; privateKey: string };
+  let identity: { address: string; publicKey: string; privateKey: string; viewingKey: bigint };
   let signature: string;
   let deposit: typeof import('../deposit');
 
@@ -199,5 +199,147 @@ describe.skipIf(!LIVE)('ensureDerivedAccountDeployed, against Sepolia', () => {
       );
     },
     TIMEOUT,
+  );
+
+  it(
+    'registers with the pool, paid by the user\'s own account',
+    async () => {
+      /* The step the deposit could never reach. `submitProvenCall` dispatches
+         to an AVNU paymaster, else to an admin manager, else — now — to the
+         account nominated by `setProvenFallbackPayer`. This runs that third
+         branch against the real Sepolia pool.
+   
+         The pool charges its protocol fee to whoever sends the transaction
+         (`collect_fee()` reads `get_caller_address()`), so the account has to
+         hold the fee AND cover the declared resource bound, which the engine
+         sizes generously (MAX_FEE_CEILING_WEI is 15 STRK). Topping up to 25
+         covers both with room to spare; the actual spend is far smaller. */
+      const { RpcProvider, Account, CallData, cairo } = await import('starknet');
+      const provider = new RpcProvider({ nodeUrl: SEPOLIA_RPC });
+
+      /* If endpoints were supplied, hand them to the engine the way the app
+         would — through its own vars, not by reaching into the config. */
+      if (process.env.AIRLOCK_LIVE_PROVER_URL) {
+        vi.stubEnv('VITE_AIRLOCK_PROVER_URL', process.env.AIRLOCK_LIVE_PROVER_URL);
+      }
+      if (process.env.AIRLOCK_LIVE_INDEXER_URL) {
+        vi.stubEnv('VITE_AIRLOCK_INDEXER_URL', process.env.AIRLOCK_LIVE_INDEXER_URL);
+      }
+      const { initBridgeConfig } = await import(
+        '../../../vendor/bridge-core/src/core/config'
+      );
+      initBridgeConfig({ dev: false, prod: true, vars: deposit.bridgeVars() });
+
+      const { readPoolFeeAmount } = await import(
+        '../../../vendor/bridge-core/src/core/poolFee'
+      );
+      const poolFee = await readPoolFeeAmount();
+      expect(poolFee, 'the pool must report its own fee').not.toBeNull();
+
+      const TOP_UP_TO = 25n * 10n ** 18n;
+      const read = async (): Promise<bigint> => {
+        const r = await provider.callContract({
+          contractAddress: STRK_TOKEN,
+          entrypoint: 'balance_of',
+          calldata: CallData.compile([identity.address]),
+        });
+        return BigInt(r[0] ?? '0x0') + (BigInt(r[1] ?? '0x0') << 128n);
+      };
+
+      const before = await read();
+      if (before < TOP_UP_TO) {
+        const funder = new Account({
+          provider,
+          address: FUNDER_ADDRESS,
+          signer: FUNDER_KEY,
+          cairoVersion: '1',
+        });
+        const { transaction_hash } = await funder.execute({
+          contractAddress: STRK_TOKEN,
+          entrypoint: 'transfer',
+          calldata: CallData.compile({
+            recipient: identity.address,
+            amount: cairo.uint256(TOP_UP_TO - before),
+          }),
+        });
+        await provider.waitForTransaction(transaction_hash);
+      }
+
+      const { makeAccount } = await import('../../../vendor/bridge-core/src/core/provider');
+      const { setProvenFallbackPayer } = await import(
+        '../../../vendor/bridge-core/src/core/proven-submit'
+      );
+      const { registerWithPool, isRegistered } = await import(
+        '../../../vendor/bridge-core/src/core/register'
+      );
+
+      const account = makeAccount(identity.address, identity.privateKey);
+      setProvenFallbackPayer(account);
+
+      expect(await isRegistered(identity.address), 'a fresh account is not registered').toBe(
+        false,
+      );
+
+      const statuses: string[] = [];
+      let registerTx: string | undefined;
+      const attempt = registerWithPool({
+        account,
+        viewingKey: identity.viewingKey,
+        onTx: (h) => {
+          registerTx = h;
+        },
+        onStatus: (m) => statuses.push(m),
+      });
+
+      /* Whether this can succeed depends on something outside the repository.
+         Proving a pool action needs a proving service, and there is no public
+         instance on Sepolia — StarkWare's own reference app leaves PROVER_URL
+         unset and says so in its .env.local. So the test asserts whichever
+         outcome the environment makes possible, and neither branch is a
+         cop-out: with a prover the pool must accept the registration, without
+         one the flow must get all the way to the prover and stop there rather
+         than failing earlier for a reason of our own making. */
+      const prover = process.env.AIRLOCK_LIVE_PROVER_URL ?? '';
+
+      if (!prover) {
+        const err = await attempt.then(() => null).catch((e: unknown) => e);
+        expect(err, 'without a prover this cannot succeed').not.toBeNull();
+        const message = err instanceof Error ? err.message : String(err);
+        /* The specific failure matters. Reaching the proving service means the
+           payer question is settled — the fee was read, the account was funded,
+           the pool was queried, and the SDK got as far as asking for a proof.
+           Any earlier error would mean something else is broken. */
+        expect(message, `expected to reach the proving service, got: ${message}`).toMatch(
+          /prover/i,
+        );
+        console.log(
+          `\n  register reached the proving service and stopped there` +
+            `\n    pool fee  ${Number(poolFee) / 1e18} STRK, read from the pool` +
+            `\n    payer     ${identity.address} (user-pays branch)` +
+            `\n    stopped   ${message}` +
+            `\n    steps     ${statuses.join(' → ') || '(none before the proof)'}` +
+            `\n    note      no public Sepolia prover exists; set` +
+            `\n              AIRLOCK_LIVE_PROVER_URL to run this for real\n`,
+        );
+        return;
+      }
+
+      await attempt;
+
+      /* The pool's own view is the authority — not the absence of a throw. */
+      expect(await isRegistered(identity.address), 'the pool must report the key on chain').toBe(
+        true,
+      );
+
+      const after = await read();
+      console.log(
+        `\n  registered ${identity.address}` +
+          `\n    tx        ${registerTx ?? '(folded, no standalone tx)'}` +
+          `\n    pool fee  ${Number(poolFee) / 1e18} STRK` +
+          `\n    spent     ${Number(TOP_UP_TO - after) / 1e18} STRK all in` +
+          `\n    steps     ${statuses.join(' → ')}\n`,
+      );
+    },
+    600_000,
   );
 });

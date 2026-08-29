@@ -44,6 +44,7 @@ import { makePoolTransfers } from './poolClient';
 import { config, resolveEvmCctpDestination } from './config';
 import { u256Calldata } from './deposit';
 import { getRpcProvider, makeAccount } from './provider';
+import { setProvenFallbackPayer } from './proven-submit';
 import { sanitizeErrorMessage } from './tx';
 import { fetchPoolFeeAmount, approvePoolFee } from './poolFee';
 import { discoverPrivateBalance } from './discover';
@@ -203,6 +204,11 @@ export async function bridgeOut(args: BridgeOutArgs): Promise<BridgeOutResult> {
   const viewingKey = deriveViewingKey(signature);
   const { address: snAddress } = deriveStarknetAccount(snPrivateKey, config.ozClassHash);
   const account = makeAccount(snAddress, snPrivateKey, provider);
+  // AIRLOCK: nominate this account as the proven-leg payer, for the case where
+  // no admin manager and no AVNU paymaster exist — which is every production
+  // build. Without it register/deposit/withdraw have no sender at all. A
+  // configured sponsor still wins; see setProvenFallbackPayer.
+  setProvenFallbackPayer(account);
   // Per-account fresh Polygon EOA — the signer that OWNS the deposit wallet.
   const eoa = derivePolygonEoa(signature, accountIndex, channel);
   // CCTP mint recipient = the EOA's CREATE2 deposit wallet (the CLOB order maker
@@ -941,6 +947,11 @@ export async function bridgeOutToWallet(
   const viewingKey = deriveViewingKey(signature);
   const { address: snAddress } = deriveStarknetAccount(snPrivateKey, config.ozClassHash);
   const account = makeAccount(snAddress, snPrivateKey, provider);
+  // AIRLOCK: nominate this account as the proven-leg payer, for the case where
+  // no admin manager and no AVNU paymaster exist — which is every production
+  // build. Without it register/deposit/withdraw have no sender at all. A
+  // configured sponsor still wins; see setProvenFallbackPayer.
+  setProvenFallbackPayer(account);
 
   // mint_recipient: the 20-byte EVM destination as a u256 (numeric value of the
   // addr) — mirrors bridgeOut()'s BigInt(eoa.address).

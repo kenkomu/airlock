@@ -194,13 +194,51 @@ export function maxFeeFromBounds(bounds: ProofResourceBounds): bigint {
 export function getManagerAccount(provider?: RpcProvider): Account {
   const admin = config.admin;
   if (!admin?.privateKey) {
+    // AIRLOCK: user-pays fallback. A production build has no admin by
+    // construction (resolveAdmin returns undefined whenever `prod` is set) and
+    // no AVNU key without a whitelisted pool, which left the proven legs with
+    // no sender at all — register/deposit/withdraw could not be submitted.
+    //
+    // The proof does not bind a sender: validate_proof hashes the actions, the
+    // pool address and its class hash, never an account, and apply_actions
+    // asserts nothing about the caller. That is the property the manager path
+    // already relies on, and it holds just as well when the sender is the user
+    // themselves. The one thing the sender decides is who pays: collect_fee()
+    // pulls the pool's STRK protocol fee from get_caller_address(), so the
+    // account set here is the account charged, and its fee-approve must come
+    // from the same place — which it does, because approvePoolFee routes
+    // through managerExecute and therefore through this function.
+    //
+    // What is lost is the unlinkability the manager bought by keeping the
+    // derived account STRK-free. Airlock already spent that: the user funds
+    // this same account with their own STRK to deploy it.
+    if (fallbackPayer) return fallbackPayer;
     throw new Error(
       'No manager (admin) account configured — proven pool submits are manager-paid ' +
         'on testnet (set ADMIN_* in dev). Production must use the AVNU paymaster ' +
-        '(TODO(monday-item): SNIP-29).',
+        '(TODO(monday-item): SNIP-29), or nominate a payer with ' +
+        'setProvenFallbackPayer().',
     );
   }
   return makeAccount(admin.address, admin.privateKey, provider);
+}
+
+// AIRLOCK: the account that pays the proven legs when nothing else will.
+//
+// Set by each flow once it has derived the user's key. Nulled by passing
+// undefined. It is deliberately NOT consulted when an admin or paymaster
+// exists — a configured sponsor always wins, so turning one on later needs no
+// change here.
+let fallbackPayer: Account | undefined;
+
+export function setProvenFallbackPayer(account: Account | undefined): void {
+  if (fallbackPayer === account) return;
+  fallbackPayer = account;
+  // The nonce cache and the shared instance both belong to the OLD payer. A
+  // stale counter would be applied to a different account's nonce sequence and
+  // every submit after the swap would be rejected (code 52).
+  sharedManager = undefined;
+  invalidateManagerNonce();
 }
 
 // --- Serialized manager-nonce manager --------------------------------------------

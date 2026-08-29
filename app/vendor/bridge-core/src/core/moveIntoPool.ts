@@ -22,6 +22,7 @@ import {
 } from '../derivation/index';
 import { config } from './config';
 import { getRpcProvider, makeAccount } from './provider';
+import { setProvenFallbackPayer } from './proven-submit';
 import { getCurrentBlock } from './proving';
 import { ensureAccountDeployed, isDeployedOnL2 } from './deploy';
 import { isRegistered, registerWithPool } from './register';
@@ -294,6 +295,11 @@ export async function moveIntoPool(
   const privateKey = deriveStarknetPrivateKey(signature);
   const viewingKey = deriveViewingKey(signature);
   const { address, publicKey } = deriveStarknetAccount(privateKey, config.ozClassHash);
+  // AIRLOCK: nominate this account as the proven-leg payer, for the case where
+  // no admin manager and no AVNU paymaster exist — which is every production
+  // build. Without it register/deposit/withdraw have no sender at all. A
+  // configured sponsor still wins; see setProvenFallbackPayer.
+  setProvenFallbackPayer(makeAccount(address, privateKey));
 
   // The one-time account-DEPLOY fee is borne by the user (paid in USDC from the
   // account inside the deploy tx) ONLY under 'default' deploy-fee mode WITH a
