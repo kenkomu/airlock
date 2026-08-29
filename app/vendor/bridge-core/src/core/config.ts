@@ -832,9 +832,22 @@ export function configFor(n: Network, e: BridgeEnv = requireEnv()): Config {
     evmCctpSources,
     evmCctpDestinations,
     // Dev-only same-origin proxied paths (production uses OHTTP, one gateway/network).
-    rpcUrl: `/rpc${suffix}`,
-    proverUrl: `/prover${suffix}`,
-    indexerUrl: `/indexer${suffix}`,
+    //
+    // AIRLOCK: each now takes an absolute-URL override. Upstream these are
+    // relative paths with no env escape, which assumes a Vite dev proxy or an
+    // OHTTP gateway is rewriting them. Airlock is a static app with neither, so
+    // unoverridden the engine's every RPC call went to `/rpc` on its own origin
+    // and failed — including the reads that decide whether an account is
+    // deployed or what the pool's fee is.
+    //
+    // The prover and indexer keep the same escape for the day an instance
+    // exists to point them at. Left unset they stay on the paths above and fail
+    // the way they always did, which is the honest behaviour: StarkWare's own
+    // reference app leaves them unset because no public Sepolia instance
+    // exists, and says so in its .env.local.
+    rpcUrl: e.vars.STARKNET_RPC_URL || `/rpc${suffix}`,
+    proverUrl: e.vars.PROVER_URL || `/prover${suffix}`,
+    indexerUrl: e.vars.INDEXER_URL || `/indexer${suffix}`,
     // Live STRK→USD price endpoint (network-independent). Empty → strkPrice.ts default.
     strkPriceUrl: e.vars.STRK_PRICE_URL || '',
     // WalletConnect (Reown) project id — opt-in for the WC-only wallet layer.

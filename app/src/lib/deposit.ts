@@ -80,7 +80,32 @@ export function bridgeVars(): Record<string, string | undefined> {
        and asked them to fund. Importing the single constant is what makes the
        two impossible to separate — see accountClass.ts. */
     OZ_ACCOUNT_CLASS_HASH,
+    /* The engine's own default is `/rpc` — a same-origin path that assumes a
+       dev proxy or an OHTTP gateway is rewriting it. Airlock is a static app
+       with neither, so without this every engine-side RPC call went nowhere. */
+    STARKNET_RPC_URL: bridgeRpcUrl(),
+    /* The proving and note-discovery services. There is no public instance of
+       either on Sepolia — StarkWare's own reference app leaves them unset for
+       that reason — so these are normally empty and the proven pool legs fail
+       legibly rather than silently. Set them the day an endpoint exists. */
+    PROVER_URL: optionalUrl('VITE_AIRLOCK_PROVER_URL'),
+    INDEXER_URL: optionalUrl('VITE_AIRLOCK_INDEXER_URL'),
   };
+}
+
+/* An optional endpoint override. Empty and unset mean the same thing — leave
+   the engine on its default — but a value that is present and malformed is a
+   typo worth refusing, since the alternative is a service call to nowhere and
+   an error that names the wrong cause. */
+function optionalUrl(name: string): string | undefined {
+  const raw = (import.meta.env[name] ?? '').trim();
+  if (raw === '') return undefined;
+  try {
+    new URL(raw);
+  } catch {
+    throw new Error(`${name} must be an absolute URL (got ${JSON.stringify(raw)}).`);
+  }
+  return raw;
 }
 
 /* An interrupted deposit, waiting to be continued.

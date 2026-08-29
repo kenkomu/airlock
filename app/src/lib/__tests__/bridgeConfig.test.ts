@@ -47,6 +47,16 @@ describe.each(['mainnet', 'testnet'] as const)('engine config on %s', (network) 
     expect(BigInt(config.ozClassHash)).toBe(BigInt(OZ_ACCOUNT_CLASS_HASH));
   });
 
+  it('gives the engine an RPC it can actually reach', async () => {
+    /* The engine's default is `/rpc`, a same-origin path that needs a dev proxy
+       or an OHTTP gateway behind it. Airlock is a static app with neither, so
+       an unoverridden engine sends every read to its own origin and gets HTML
+       back. */
+    const config = await engineConfigFor(network);
+    expect(config.rpcUrl).toMatch(/^https:\/\//);
+    expect(config.rpcUrl).toContain(network === 'mainnet' ? 'mainnet' : 'sepolia');
+  });
+
   it('points the pool at the network it was asked for', async () => {
     /* A config that started but silently resolved the other network's pool
        would be worse than one that threw. */
