@@ -33,10 +33,27 @@ The honest answer to "can I use this". Deliberately placed before the design, so
 | ✅ | **Per-rung crowd measurement** — how many people have actually used each note size, counted live from the pool's own events, with the rarest leg named ([docs/anonymizer.md](docs/anonymizer.md)) |
 | ✅ | **Four real mainnet round trips** through the anonymizer — amounts, splits, fees and verification in [docs/mainnet-runs.md](docs/mainnet-runs.md) |
 | ✅ | **Connect from a chain that is not Starknet** — one MetaMask signature derives a Starknet account and viewing key, no Starknet wallet required ([`identity.ts`](app/src/lib/identity.ts)) |
-| 🟡 | **Bridge in over CCTP** — deploy, register and deposit run from one press, funded out of the USDC being moved. Built, but **not yet run against a real chain**; treat as unproven until a transfer has landed |
-| 🟡 | **Withdraw to a different chain** — burn on Starknet, Circle attests, USDC mints at an address you name. Built; **not yet run against a real chain** |
+| ✅ | **Create a Starknet account from that signature, paying its own way** — proven on Sepolia, both the refusal when it cannot afford itself and the deploy when it can, at a measured **0.0815 STRK** ([`deployAccount.live.test.ts`](app/src/lib/__tests__/deployAccount.live.test.ts)) |
+| 🟡 | **Bridge in over CCTP** — deploy, register and deposit run from one press, funded out of the USDC being moved. The deploy is proven; **the pool legs stop at the proving service** ([below](#what-is-blocked-and-by-what)) |
+| 🟡 | **Withdraw to a different chain** — burn on Starknet, Circle attests, USDC mints at an address you name. Same blocker, same line |
 
-**49 Cairo tests** (39 offline, 10 against a forked chain) and **151 TypeScript tests**, run on every push.
+**49 Cairo tests** (39 offline, 10 against a forked chain) and **167 TypeScript tests**, run on every push, plus **8 live tests** against Sepolia that are skipped everywhere by default and never run in CI.
+
+### What is blocked, and by what
+
+One thing, and it is not in this repository.
+
+Registering with the pool, depositing into it and withdrawing from it are *proven* actions: the client builds a ZK proof and a proving service returns it. There is **no public proving or indexing service on Sepolia**. That is not our finding — it is what StarkWare's own reference app says, in the `.env.local` it ships:
+
+> Prover and indexer are deliberately left unset for now: no public Sepolia instance exists […] The UI, wallet connection, and key derivation all work without them; only proved pool actions fail, and they fail legibly.
+
+So those three legs cannot be exercised on Sepolia by anyone, this app included. Run the live suite and the register leg gets through reading the pool's fee, approving it on chain, selecting a proving block and building the registration, then stops at `ProvingService` with `Failed to parse URL from /prover`.
+
+Everything upstream of that line is proven working, including the part that was genuinely unknown. The proven legs are normally submitted by an AVNU paymaster or an admin manager, and a production build can have neither — an admin key would have to ship in the browser bundle, which is not a thing we will do. Airlock instead nominates the user's own account as the sender, which the pool permits because the proof binds no sender: `validate_proof` hashes the actions, the pool address and its class hash, never an account. On Sepolia that account deployed itself and approved the pool exactly the **2 STRK** the pool asked for, on chain.
+
+The cost of that choice is stated rather than buried: the sender pays the pool's fee, **2 STRK per submit on Sepolia and 6 on mainnet**, and the account is no longer STRK-free, which is a linkage the manager-paid design avoided. Airlock had already spent that one — the user funds this same account to deploy it.
+
+**To unblock:** point `VITE_AIRLOCK_PROVER_URL` and `VITE_AIRLOCK_INDEXER_URL` at a live instance. The live test then asserts a real registration instead of asserting where it stops.
 
 ## Why this exists
 
@@ -215,6 +232,23 @@ snforge test fork_tests          # 10 tests against a pinned Sepolia fork
 ```
 
 Fork tests are excluded from CI on purpose: they need network access and a public RPC, neither of which belongs in a pipeline whose job is to say whether the code is correct.
+
+### The live tests
+
+Some things cannot be proven offline — an RPC reporting no class at an address, a fee estimate against an account that does not exist yet, a pool charging its own fee. Those run against Starknet Sepolia, cost nothing but test STRK, and are skipped everywhere unless asked for by name:
+
+```bash
+AIRLOCK_LIVE=1 \
+AIRLOCK_LIVE_FUNDER_ADDRESS=0x… \
+AIRLOCK_LIVE_FUNDER_KEY=0x… \
+pnpm vitest run src/lib/__tests__/deployAccount.live.test.ts
+```
+
+The funder is a throwaway Sepolia account holding test STRK; its key is read from the environment, never from a file in this repository and never defaulted. A fresh identity is generated on every run, because the branch worth testing is the first-time one.
+
+Add `AIRLOCK_LIVE_PROVER_URL` and `AIRLOCK_LIVE_INDEXER_URL` if you have endpoints, and the register test stops asserting where it stops and starts asserting a real registration. The app itself reads the same two as `VITE_AIRLOCK_PROVER_URL` and `VITE_AIRLOCK_INDEXER_URL`.
+
+`VITE_AIRLOCK_BRIDGE_NETWORK` chooses which chain the bridge legs point at. It defaults to `mainnet`, because that is what the deployed site must do, and refuses anything but `mainnet` or `testnet` rather than falling back to a default that spends real money.
 
 ## Deployments
 
