@@ -20,6 +20,7 @@
  */
 
 import type { MoveStep, StepStatus } from '../../vendor/bridge-core/src/core/moveIntoPool';
+import { OZ_ACCOUNT_CLASS_HASH } from './accountClass';
 
 export type { MoveStep, StepStatus };
 
@@ -63,9 +64,22 @@ export function bridgeRpcUrl(net: BridgeNetwork = bridgeNetwork()): string {
     : 'https://api.cartridge.gg/x/starknet/sepolia';
 }
 
-function bridgeVars(): Record<string, string | undefined> {
+/* Exported for the test that actually starts the engine's config with it. The
+   guarantee worth pinning is not the shape of this object but that
+   `initBridgeConfig` accepts it — which it did not, on either network. */
+export function bridgeVars(): Record<string, string | undefined> {
   return {
     NETWORK: bridgeNetwork(),
+    /* Required, with no baked default, for both networks — `initBridgeConfig`
+       throws "Config error: OZ_ACCOUNT_CLASS_HASH_… is not set" without it, and
+       it throws on the first call, so the deposit could not start at all.
+
+       It has to be the SAME constant the address was derived from. The engine
+       deploys against whatever class it is given; a different value here would
+       have it deploy a different address than the one the app showed the user
+       and asked them to fund. Importing the single constant is what makes the
+       two impossible to separate — see accountClass.ts. */
+    OZ_ACCOUNT_CLASS_HASH,
   };
 }
 

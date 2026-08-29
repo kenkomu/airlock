@@ -62,21 +62,10 @@ export const AIRLOCK_IDENTITY_SIGN_MESSAGE = [
   'Version: 1',
 ].join('\n');
 
-/* The account class the derived address is computed against.
- *
- * This is part of the identity domain, not a deployment detail: the class hash
- * is folded into the address, so pointing at a different account class derives a
- * different address from the same signature and leaves the old one holding the
- * funds. It is pinned here for the same reason the message above is.
- *
- * OpenZeppelin's account, the one StarkWare's own bridge deploys. A baked value
- * is only safe if the class is actually declared on chain — an address computed
- * against an undeclared class cannot be deployed to, and the failure arrives
- * after the user has funded it. Checked rather than assumed: `starknet_getClass`
- * returns it on Starknet mainnet and on Sepolia, and the hash is the same on
- * both, which is why one constant covers both networks. */
-export const OZ_ACCOUNT_CLASS_HASH =
-  '0x5b4b537eaa2399e3aa99c4e2e0208ebd6c71bc1467938cd52c798c601e43564';
+/* Re-exported so the identity domain still reads as one piece, while the value
+   itself lives in a leaf module the bridge engine's config can also import
+   without pulling the derivation in with it. See accountClass.ts. */
+export { OZ_ACCOUNT_CLASS_HASH } from './accountClass';
 
 /* A derived identity, in memory only.
  *
