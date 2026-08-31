@@ -114,3 +114,50 @@ curl -s -X POST https://starknet-rpc.publicnode.com \
        \"params\":[{\"from_block\":{\"block_number\":13650000},\"to_block\":\"latest\",
        \"address\":\"$OURS\",\"chunk_size\":100}]}"
 ```
+
+## What the browser claims, checked against the chain
+
+Run on 31 August 2026, against mainnet, while the app was open. The point is not
+that the code passes its own tests — it does — but that the two numbers the user
+is asked to trust are the chain's numbers.
+
+### The split preview is the contract's answer, not ours
+
+`AirlockBucketer.plan()` was called directly for every amount typed into the
+panel, and compared with what the panel displayed:
+
+| Typed | Panel showed | `plan()` returned |
+|---|---|---|
+| `5` | 1 note | 1 note: 5 |
+| `8.4` | 7 notes, the 2.5 leg flagged distinctive | 7 notes: 5 + 2.5 + 0.5 + 0.1 × 4 |
+| `0.37` | refused | reverts |
+| `0` | refused | reverts |
+| `999999` | refused | reverts |
+
+`denominations()` returns `100 · 50 · 25 · 10 · 5 · 2.5 · 1 · 0.5 · 0.1`, which is
+the "standard sizes" line in the panel verbatim. This is by construction rather
+than luck — `denominate()` reads the plan off the contract and never computes
+one locally, on the grounds that a preview disagreeing with the contract is a
+preview bug and not a failed transaction.
+
+### The anonymity headline is a real count, and a deliberately unflattering one
+
+The panel said **216 deposits — STRK 172 (80%), USDC 35 (16%)**. An independent
+scan of the same 200,000-block window an hour later, counting `Deposit` events
+straight from the pool:
+
+```
+Deposit events           218
+  STRK                   176   81%
+  USDC                    33   15%
+OpenNoteDeposited        110
+```
+
+The drift is what a rolling window does — STRK gained four, USDC aged two out.
+
+The interesting figure is the 110. `OpenNoteDeposited` is emitted once per note
+an anonymizer creates, **including every leg this project's own splits produce**.
+Counting them would take the headline from 218 to 328 and make the pool look
+half again as crowded as it is, using notes Airlock minted itself. `tallyEvents`
+feeds them to the size histogram and refuses them as deposits. An app whose
+claim is naming what leaks does not get to inflate its own anonymity set.
