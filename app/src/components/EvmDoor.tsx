@@ -14,7 +14,49 @@
 import type { EvmIdentitySession } from '../hooks/useEvmIdentity';
 import { shortEvmAddress } from '../lib/evm';
 import { Copyable } from './Copyable';
+import { useEffect, useState } from 'react';
+import { providerFor, publicBalances, formatUnits, type ShieldedBalance } from '../lib/wallet';
+import { NETWORKS, SN_MAIN } from '../lib/networks';
 import { shortAddress } from '../lib/identity';
+
+/* What the derived account holds in the open, read from the chain.
+ *
+ * "Not active yet" answered what the account IS but not the question people
+ * actually open this panel with, which is what is in it. The account has no
+ * shielded balance by definition until its first deposit — but it may well
+ * hold the STRK someone just sent it to pay for that deposit, and before this
+ * there was no way to confirm the transfer had landed except an explorer. */
+function useDerivedBalances(address: string | null): {
+  balances: ShieldedBalance[] | null;
+  failed: boolean;
+} {
+  const [balances, setBalances] = useState<ShieldedBalance[] | null>(null);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    if (!address) return;
+    let cancelled = false;
+    setBalances(null);
+    setFailed(false);
+    const network = NETWORKS.find((n) => n.chainId === SN_MAIN);
+    const tokens = network?.tokens.map((t) => ({
+      token: t.address,
+      symbol: t.symbol,
+      decimals: t.decimals,
+    }));
+    if (!network || !tokens?.length) return setFailed(true);
+    publicBalances(providerFor(network), address, tokens)
+      .then((b) => !cancelled && setBalances(b))
+      /* An unreadable balance is not a zero balance, and showing 0 here would
+         tell someone their funds had not arrived when they may well have. */
+      .catch(() => !cancelled && setFailed(true));
+    return () => {
+      cancelled = true;
+    };
+  }, [address]);
+
+  return { balances, failed };
+}
 
 export function EvmDoor({
   session,
@@ -28,6 +70,10 @@ export function EvmDoor({
   onDone?: () => void;
 }) {
   const { state, forget } = session;
+  /* Hooks cannot sit behind the `ready` early-return below. */
+  const derivedAddress =
+    state.phase === 'ready' ? state.identity.starknetAddress : null;
+  const { balances, failed: balancesFailed } = useDerivedBalances(derivedAddress);
 
   if (state.phase === 'ready') {
     const { identity } = state;
@@ -61,6 +107,33 @@ export function EvmDoor({
             </dd>
           </div>
         </dl>
+
+        <div className="door-bal">
+          <p className="sm muted door-bal-h">Holds publicly</p>
+          {balancesFailed ? (
+            <p className="sm muted">
+              Could not read the chain just now — unknown, not zero.
+            </p>
+          ) : balances === null ? (
+            <p className="sm muted">Reading…</p>
+          ) : balances.some((b) => b.amount > 0n) ? (
+            <ul className="bal-list">
+              {balances
+                .filter((b) => b.amount > 0n)
+                .map((b) => (
+                  <li key={b.token} className="sm">
+                    <span className="mono">{formatUnits(b.amount, b.decimals)}</span>{' '}
+                    {b.symbol}
+                  </li>
+                ))}
+            </ul>
+          ) : (
+            <p className="sm muted">Nothing yet.</p>
+          )}
+          <p className="sm muted">
+            Shielded: nothing until the first deposit — that is what creates it.
+          </p>
+        </div>
 
         {/* This said "don't send anything to it", which was true when nothing
             could act on the account and became actively misleading the moment

@@ -196,7 +196,11 @@ export function ConnectWallet({
             onClick={(e) => e.stopPropagation()}
           >
             <header className="sheet-h">
-              <h2 id="wsel-h">Connect a wallet</h2>
+              {/* The pill opens this sheet to SHOW an account, and the heading
+                  said "Connect a wallet" over the address the user came to
+                  look at — asking again for the thing already done. It names
+                  what is on screen instead. */}
+              <h2 id="wsel-h">{evmIdentity ? 'Your account' : 'Connect a wallet'}</h2>
               <button
                 ref={closeRef}
                 type="button"

@@ -16,6 +16,7 @@
 import { describe, expect, it } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { DenominatePanel } from '../DenominatePanel';
+import { ConnectWallet } from '../ConnectWallet';
 import type { WalletSession } from '../../hooks/useWallet';
 import type { EvmIdentitySession } from '../../hooks/useEvmIdentity';
 
@@ -81,5 +82,46 @@ describe('DenominatePanel renders', () => {
     /* The refusal must name the account rather than ask for a step already done. */
     expect(html).toContain('0x0672');
     expect(html).not.toContain('Connect a wallet to do this for real');
+  });
+});
+
+describe('the account sheet', () => {
+  /* Opened from the address pill, so it is where someone goes to ask "what is
+     in my account". It used to answer a different question: the heading said
+     "Connect a wallet" over the address they had come to look at, and the
+     balance was not shown at all. */
+  it('names the account rather than asking to connect again', () => {
+    const html = renderToStaticMarkup(
+      <ConnectWallet session={noWallet} evmSession={READY} open={true} setOpen={() => {}} />,
+    );
+    expect(html).toContain('Your account');
+    expect(html).not.toContain('<h2 id="wsel-h">Connect a wallet</h2>');
+    /* Both halves of the identity, each copyable. */
+    expect(html).toContain('0x0672');
+    expect(html).toContain('0x0000');
+  });
+
+  it('reports the public balance, and separates it from the shielded one', () => {
+    const html = renderToStaticMarkup(
+      <ConnectWallet session={noWallet} evmSession={READY} open={true} setOpen={() => {}} />,
+    );
+    expect(html).toContain('Holds publicly');
+    /* Under SSR the read has not resolved. "Reading…" and "Nothing yet" must
+       stay distinguishable — an unknown balance shown as zero would tell
+       someone their transfer had not landed when it may have. */
+    expect(html).toContain('Reading…');
+    expect(html).toContain('Shielded: nothing until the first deposit');
+  });
+
+  it('still offers the wallet list when there is no identity', () => {
+    const html = renderToStaticMarkup(
+      <ConnectWallet
+        session={noWallet}
+        evmSession={evm({ phase: 'idle' })}
+        open={true}
+        setOpen={() => {}}
+      />,
+    );
+    expect(html).toContain('Connect a wallet');
   });
 });

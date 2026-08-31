@@ -2597,6 +2597,37 @@ body {
   margin: 0;
   font-size: 0.85rem;
 }
+/* What the account holds, above the caveat about what it cannot do yet. Set
+   apart with a rule rather than a card: it is a fact about the account, the
+   same weight as the addresses above it, and boxing it would make it compete
+   with the amber warning that follows. */
+.door-bal {
+  display: grid;
+  gap: var(--s1);
+  padding-top: var(--s2);
+  border-top: 1px solid var(--line);
+}
+.door-bal-h {
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 0.7rem;
+}
+.door-bal p {
+  margin: 0;
+}
+.bal-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 2px;
+}
+.bal-list .mono {
+  color: var(--text-1);
+  font-weight: 600;
+}
+
 /* The warning uses the leak palette, the same one the split panel uses for a
    rung nobody else is standing on. Consistency matters more than novelty here:
    amber already means "this is the honest caveat" everywhere else in the app. */
