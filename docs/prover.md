@@ -96,11 +96,44 @@ provision is one command:
 grep -o -w -m1 avx512f /proc/cpuinfo || echo "no AVX-512: this image will SIGILL"
 ```
 
-Two ways past it. Rent a machine that has the instructions, which is what the
-matrix assumes. Or build the prover from source for your own CPU — the
-sequencer repo ships `scripts/build_starknet_transaction_prover.sh
---target-cpu native` — accepting a large nightly-Rust build and, on a 4-core
-laptop, proving times that may not be worth the wait.
+Note that **GitHub-hosted runners will not do either**, which is worth knowing
+before you try: the runner is an AMD EPYC 9V74 — Zen 4, which has AVX-512 in
+silicon — but Azure masks it off. `vaes` and `sha_ni` are exposed, the AVX-512
+flags are not.
+
+### AVX-512 is a build flag, not a requirement
+
+The interesting part is that nothing here actually needs those instructions.
+The prover is [stwo][stwo], which works over the Mersenne-31 field; 31-bit
+arithmetic packs neatly into 32-bit SIMD lanes, and that is where the speed
+comes from. Its README is explicit that the SIMD backend targets "AVX2,
+AVX-512, NEON, WebAssembly SIMD", and that "the CPU backend works without
+SIMD".
+
+[stwo]: https://github.com/starkware-libs/stwo
+
+So AVX-512 is how StarkWare packages the binary for their own hardware, not a
+floor the maths imposes. Upstream's Dockerfile says as much in its header —
+it is "designed for external parties to build and run the tx prover" — and its
+`TARGET_CPU` build arg **defaults to empty**.
+
+Building it for the CPU you have is therefore the supported path, not a hack:
+
+```sh
+scripts/build-prover.sh          # -C target-cpu=native
+scripts/build-prover.sh --generic # baseline x86-64, portable
+```
+
+That fetches the exact sequencer revision the published image was built from —
+`e6b6fd2`, read off the image's own `org.opencontainers.image.revision` label,
+so the prover matches the pool the SDK targets — and builds
+`airlock/tx-prover:local`. `scripts/prover.sh` prefers that image whenever it
+exists, and only falls back to the published one otherwise.
+
+Budget one to three hours on four cores. It is a nightly-Rust build of the
+sequencer's prover crate and its dependency graph, and the resulting binary is
+~175 MB. Proving on an AVX2 laptop will be slower than on the 48-vCPU machine
+the matrix specifies — that part of the spec really is about throughput.
 
 The script pins `MAX_CONCURRENT_REQUESTS=1` regardless, so a small machine
 proves one at a time rather than being killed by the OOM reaper.

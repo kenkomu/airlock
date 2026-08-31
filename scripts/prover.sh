@@ -23,6 +23,7 @@ cd "$(dirname "$0")/.."
 # README. Every component in that row is tested together, so bump the pool,
 # the SDK and this tag as a set — never one alone.
 IMAGE=ghcr.io/starkware-libs/starknet-privacy/transaction-prover:PRIVACY-0.14.3-RC.2
+LOCAL_IMAGE=airlock/tx-prover:local
 CONTAINER=airlock-prover
 PORT=${PROVER_PORT:-3000}
 
@@ -38,28 +39,6 @@ case "$NETWORK" in
   mainnet) RPC_URL=$MAINNET_RPC; CHAIN_ID=SN_MAIN ;;
   *) echo "usage: scripts/prover.sh {sepolia|mainnet} [--stop]" >&2; exit 2 ;;
 esac
-
-# The image is built for a modern server microarchitecture (the sequencer's own
-# build script targets znver5). On a CPU without those instructions the binary
-# takes SIGILL inside `--help` — before it parses an argument or writes a log
-# line — so the only symptom is a container that exited with empty logs. Say so
-# here instead, where it is answerable.
-if ! grep -qw avx512f /proc/cpuinfo 2>/dev/null; then
-  cat >&2 <<'MSG'
-This CPU has no AVX-512, and the published prover image requires it.
-
-  The binary carries ~650k AVX-512 instructions plus VAES and SHA-NI. It will
-  die with "Illegal instruction" (exit 132) and log nothing at all.
-
-  Either run the prover on a machine that has them — Intel Ice Lake /
-  Sapphire Rapids or newer (GCP c3/c4, AWS c6i/c7i), AMD Genoa / Turin
-  (GCP c4d) — or build it for this CPU from the sequencer repo:
-    scripts/build_starknet_transaction_prover.sh --target-cpu native
-
-  See docs/prover.md.
-MSG
-  exit 1
-fi
 
 DOCKER=docker
 if ! $DOCKER info >/dev/null 2>&1; then
@@ -77,6 +56,35 @@ Cannot reach the Docker daemon.
 MSG
     exit 1
   fi
+fi
+
+# A locally built prover — see scripts/build-prover.sh — is compiled for this
+# CPU and is therefore the one to use when it exists. The published image is
+# the fallback, and it is the one with the instruction-set problem.
+if [ -n "$($DOCKER images -q "$LOCAL_IMAGE" 2>/dev/null)" ]; then
+  IMAGE=$LOCAL_IMAGE
+  echo "image $IMAGE (built here)"
+elif ! grep -qw avx512f /proc/cpuinfo 2>/dev/null; then
+  cat >&2 <<'MSG'
+This CPU has no AVX-512, and the published prover image requires it.
+
+  The binary carries ~650k AVX-512 instructions plus VAES and SHA-NI. It will
+  die with "Illegal instruction" (exit 132) and log nothing at all.
+
+  Build one for this CPU instead — the upstream Dockerfile is meant for
+  exactly this, and its target-cpu arg defaults to empty:
+
+    scripts/build-prover.sh
+
+  Or run the published image on a machine with the instructions: Intel Ice
+  Lake / Sapphire Rapids or newer, AMD Genoa / Turin. Note that GitHub-hosted
+  runners will not do — Azure masks AVX-512 off their EPYC hosts.
+
+  See docs/prover.md.
+MSG
+  exit 1
+else
+  echo "image $IMAGE (published)"
 fi
 
 if [ "${2:-}" = "--stop" ]; then
