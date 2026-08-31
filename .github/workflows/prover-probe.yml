@@ -1,0 +1,64 @@
+name: Prover probe
+
+# Can a GitHub runner run the STRK20 transaction prover?
+#
+# The published image is built for a modern server microarchitecture and takes
+# SIGILL — silently, with empty logs — on a CPU without AVX-512 (docs/prover.md).
+# That rules out the development laptop. Runners are cloud VMs and may not have
+# the same problem, and they cost nothing for a public repo.
+#
+# Manual trigger only: this answers a question, it is not part of the build.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: What CPU did we get
+        run: |
+          grep -m1 'model name' /proc/cpuinfo
+          echo "cores: $(nproc)  RAM: $(free -g | awk '/Mem:/{print $2}')GB"
+          for f in avx512f avx512vl avx512bw avx512dq vaes sha_ni; do
+            grep -qw "$f" /proc/cpuinfo && echo "  $f: yes" || echo "  $f: NO"
+          done
+
+      - name: Stop early if the instructions are missing
+        run: |
+          if ! grep -qw avx512f /proc/cpuinfo; then
+            echo "::warning::No AVX-512 on this runner — the prover image cannot run here."
+            echo "SKIP=1" >> "$GITHUB_ENV"
+          fi
+
+      # Run the binary directly rather than through the container: a SIGILL
+      # inside docker surfaces as an exited container with no logs, which is
+      # the failure mode that cost an afternoon. Here the shell reports 132.
+      - name: Start the prover
+        if: env.SKIP != '1'
+        run: |
+          docker run -d --name prover -p 3000:3000 \
+            -e RPC_URL=https://api.zan.top/public/starknet-sepolia/rpc/v0_10 \
+            -e CHAIN_ID=SN_SEPOLIA \
+            -e MAX_CONCURRENT_REQUESTS=1 \
+            ghcr.io/starkware-libs/starknet-privacy/transaction-prover:PRIVACY-0.14.3-RC.2
+
+          for _ in $(seq 1 60); do
+            v=$(curl -s --max-time 3 -X POST http://localhost:3000 \
+                  -H 'Content-Type: application/json' \
+                  -d '{"jsonrpc":"2.0","id":1,"method":"starknet_specVersion","params":[]}' \
+                | sed -n 's/.*"result":"\([^"]*\)".*/\1/p') || true
+            if [ -n "$v" ]; then echo "PROVER UP — spec $v"; exit 0; fi
+            if [ -z "$(docker ps -q --filter name=^prover$)" ]; then
+              echo "container exited; logs follow:"
+              docker logs prover || true
+              echo "exit code: $(docker inspect -f '{{.State.ExitCode}}' prover)"
+              exit 1
+            fi
+            sleep 2
+          done
+          echo "timed out"; docker logs prover || true; exit 1
+
+      - name: Health
+        if: env.SKIP != '1'
+        run: curl -s -o /dev/null -w 'GET /health -> %{http_code}\n' http://localhost:3000/health
