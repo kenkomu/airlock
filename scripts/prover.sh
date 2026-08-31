@@ -39,6 +39,28 @@ case "$NETWORK" in
   *) echo "usage: scripts/prover.sh {sepolia|mainnet} [--stop]" >&2; exit 2 ;;
 esac
 
+# The image is built for a modern server microarchitecture (the sequencer's own
+# build script targets znver5). On a CPU without those instructions the binary
+# takes SIGILL inside `--help` — before it parses an argument or writes a log
+# line — so the only symptom is a container that exited with empty logs. Say so
+# here instead, where it is answerable.
+if ! grep -qw avx512f /proc/cpuinfo 2>/dev/null; then
+  cat >&2 <<'MSG'
+This CPU has no AVX-512, and the published prover image requires it.
+
+  The binary carries ~650k AVX-512 instructions plus VAES and SHA-NI. It will
+  die with "Illegal instruction" (exit 132) and log nothing at all.
+
+  Either run the prover on a machine that has them — Intel Ice Lake /
+  Sapphire Rapids or newer (GCP c3/c4, AWS c6i/c7i), AMD Genoa / Turin
+  (GCP c4d) — or build it for this CPU from the sequencer repo:
+    scripts/build_starknet_transaction_prover.sh --target-cpu native
+
+  See docs/prover.md.
+MSG
+  exit 1
+fi
+
 DOCKER=docker
 if ! $DOCKER info >/dev/null 2>&1; then
   if sudo -n docker info >/dev/null 2>&1; then

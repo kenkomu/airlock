@@ -59,6 +59,12 @@ The cost of that choice is stated rather than buried: the sender pays the pool's
 scripts/prover.sh sepolia          # then VITE_AIRLOCK_PROVER_URL=http://localhost:3000
 ```
 
+One catch, and it is a hard gate rather than a slow path: the published image is
+built for a modern server microarchitecture and takes SIGILL on a CPU without
+AVX-512, logging nothing at all. `scripts/prover.sh` checks `/proc/cpuinfo` and
+says so before starting anything. A 2018 laptop chip will not do; an Ice Lake or
+Genoa-class machine will.
+
 That is enough for the register leg on its own: `registerWithPool` constructs a discovery provider but never calls it, because registration publishes a viewing key and discovers nothing. Deposit and withdraw do need the indexer, and the indexer is the more expensive half — it tails blocks over a WebSocket that no public RPC exposes, so it wants a Pathfinder node of its own. See [docs/prover.md](docs/prover.md) for the images, the version matrix, and which leg needs which service.
 
 ## Why this exists

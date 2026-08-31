@@ -65,10 +65,45 @@ VITE_AIRLOCK_PROVER_URL=http://localhost:3000
 
 or the live tests at `AIRLOCK_LIVE_PROVER_URL`.
 
-The published spec for this image is a 48-vCPU / 96-GB machine, which is about
-production throughput rather than a single proof. The script pins
-`MAX_CONCURRENT_REQUESTS=1` so a laptop proves one at a time instead of being
-killed by the OOM reaper. Expect it to be slow; expect it to work.
+### It will not run on an older CPU
+
+The published spec for this image is a 48-vCPU / 96-GB machine, and it is
+tempting to read that as throughput advice — run one proof at a time and be
+patient. It is not. The image is compiled for a modern server
+microarchitecture, and on anything older it does not start:
+
+```
+$ starknet_transaction_prover --help
+Illegal instruction (core dumped)     # exit 132
+```
+
+That is `--help`, before any argument is parsed or any log line is written, so
+the failure looks like a container that exited with empty logs. Disassembling
+the binary says why — it carries **654,685 AVX-512 (`zmm`) instructions**,
+10,056 EVEX-only ops, 706 VAES and 148 SHA-NI. This matches the
+`-C target-cpu=znver5` build the README documents.
+
+So the CPU requirement is a hard gate, not a performance tier:
+
+| Needs | Have it | Don't |
+|---|---|---|
+| AVX-512, VAES, SHA-NI | Intel Ice Lake / Sapphire Rapids+ (GCP c3/c4, AWS c6i/c7i), AMD Genoa / Turin (`znver4`+, GCP c4d) | Any pre-Ice-Lake Intel laptop chip; AMD up to `znver3`, incl. Hetzner CCX (EPYC Milan) |
+
+A 2018 i7-8665U — Whiskey Lake — has none of the four. Checking before you
+provision is one command:
+
+```sh
+grep -o -w -m1 avx512f /proc/cpuinfo || echo "no AVX-512: this image will SIGILL"
+```
+
+Two ways past it. Rent a machine that has the instructions, which is what the
+matrix assumes. Or build the prover from source for your own CPU — the
+sequencer repo ships `scripts/build_starknet_transaction_prover.sh
+--target-cpu native` — accepting a large nightly-Rust build and, on a 4-core
+laptop, proving times that may not be worth the wait.
+
+The script pins `MAX_CONCURRENT_REQUESTS=1` regardless, so a small machine
+proves one at a time rather than being killed by the OOM reaper.
 
 ## Why the indexer is the harder half
 
