@@ -7,6 +7,6 @@ export default defineConfig({
   resolve: { alias: vendorAlias },
   test: {
     environment: 'node',
-    include: ['src/**/*.test.ts'],
+    include: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
   },
 });

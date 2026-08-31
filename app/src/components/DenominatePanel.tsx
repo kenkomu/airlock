@@ -12,7 +12,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { fetchPlan } from '../lib/actions';
 import { denominate, format, type Stage } from '../lib/denominate';
 import { NETWORKS, SN_MAIN, bucketerFor, contractUrl, txUrl, type Bucketer, type Network } from '../lib/networks';
-import { providerFor } from '../lib/wallet';
+import { providerFor, short } from '../lib/wallet';
 import { recordSplit } from '../lib/history';
 import { crowdAt, type SizeCount } from '../lib/pool';
 
@@ -32,7 +32,6 @@ const OBSERVED_NETWORK_FEE = '3.47 STRK';
 const OBSERVED_TX = '0x03f52e1bddd716344f5dd3c43ba2b81eb1aefb0bc7791aba3e54051b40963a50';
 import type { WalletSession } from '../hooks/useWallet';
 import type { EvmIdentitySession } from '../hooks/useEvmIdentity';
-import { shortAddress } from '../lib/identity';
 import { IconLock } from './Icons';
 
 /* Parses a human amount into base units without going through a float. 0.1 is
@@ -55,6 +54,24 @@ function toBaseUnits(text: string, decimals: number): bigint | null {
    project sees a live mainnet call in the first ten seconds. Neither has to
    install anything to get there. */
 const MAINNET = NETWORKS.find((n) => n.chainId === SN_MAIN)!;
+
+/* Which deployment this panel routes through: the one holding a shielded
+   balance if there is one, else the network's first.
+
+   Computed rather than fetched — `bucketerFor` is an array lookup over a
+   static table — so it belongs in the first render. It used to be set only
+   from an effect, which meant the panel's opening frame had no bucketer and
+   rendered "Nothing to route through on Mainnet yet. Mainnet is next" before
+   correcting itself. A momentary lie about what the app supports is still a
+   lie, and this one contradicted the panel directly above it. */
+function pickBucketer(
+  network: Network | undefined,
+  balances: WalletSession['balances'],
+): Bucketer | null {
+  if (!network) return null;
+  const held = balances.find((b) => b.amount > 0n && bucketerFor(network, b.token));
+  return (held && bucketerFor(network, held.token)) ?? network.bucketers[0] ?? null;
+}
 
 export function DenominatePanel({
   session,
@@ -85,7 +102,9 @@ export function DenominatePanel({
      own address is the kind of untruth this app is about. */
   const derived = evmSession.state.phase === 'ready' ? evmSession.state.identity : null;
 
-  const [bucketer, setBucketer] = useState<Bucketer | null>(null);
+  const [bucketer, setBucketer] = useState<Bucketer | null>(() =>
+    pickBucketer(network, session.balances),
+  );
   /* Preview opens with a worked example already in the field. An empty input
      asks a newcomer to guess a number before they know what the thing does,
      and it makes the panel look inert to anyone skimming — the split is the
@@ -110,13 +129,7 @@ export function DenominatePanel({
      the first deployment. Picking a token they have no balance in is a dead end
      they then have to diagnose. */
   useEffect(() => {
-    if (!network) return setBucketer(null);
-    const held = session.balances.find(
-      (b) => b.amount > 0n && bucketerFor(network, b.token),
-    );
-    setBucketer(
-      (held && bucketerFor(network, held.token)) ?? network.bucketers[0] ?? null,
-    );
+    setBucketer(pickBucketer(network, session.balances));
   }, [network, session.balances]);
 
   /* What this account actually holds shielded in the selected token. Without
@@ -446,7 +459,7 @@ export function DenominatePanel({
         <>
           <p className="muted">
             Your derived account{' '}
-            <span className="mono">{shortAddress(derived.starknetAddress)}</span> holds
+            <span className="mono">{short(derived.starknetAddress)}</span> holds
             nothing in the pool yet, so there is no shielded balance to split.
             Move funds in first, or connect a Starknet wallet that already has some.
           </p>
