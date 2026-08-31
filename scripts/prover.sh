@@ -65,10 +65,12 @@ fi
 
 # Refuse to start against an RPC that cannot serve the prover, rather than
 # letting it fail later inside a proof where the error is unrecognisable.
+# `|| true`: pipefail would otherwise turn a failed curl into a fatal error
+# under `set -e`, which is exactly the case this check exists to report.
 spec=$(curl -s --max-time 15 -X POST "$RPC_URL" \
   -H 'Content-Type: application/json' \
   -d '{"jsonrpc":"2.0","id":1,"method":"starknet_specVersion","params":[]}' \
-  | sed -n 's/.*"result":"\([^"]*\)".*/\1/p')
+  | sed -n 's/.*"result":"\([^"]*\)".*/\1/p') || true
 case "$spec" in
   0.10.*) echo "rpc  $RPC_URL (spec $spec)" ;;
   "")     echo "RPC $RPC_URL did not answer starknet_specVersion." >&2; exit 1 ;;
@@ -91,10 +93,13 @@ $DOCKER run -d --name "$CONTAINER" \
 echo "chain $CHAIN_ID"
 printf 'waiting for the prover to answer on :%s ' "$PORT"
 for _ in $(seq 1 60); do
+  # A refused connection is the normal state while the prover boots, so the
+  # failure must not escape: `set -e` plus `pipefail` would abort the wait on
+  # the first poll, before a single dot is printed.
   v=$(curl -s --max-time 3 -X POST "http://localhost:$PORT" \
     -H 'Content-Type: application/json' \
     -d '{"jsonrpc":"2.0","id":1,"method":"starknet_specVersion","params":[]}' \
-    | sed -n 's/.*"result":"\([^"]*\)".*/\1/p')
+    | sed -n 's/.*"result":"\([^"]*\)".*/\1/p') || true
   if [ -n "$v" ]; then
     echo
     echo "ready — prover spec $v"
@@ -107,6 +112,14 @@ for _ in $(seq 1 60); do
     echo "Logs:  $DOCKER logs -f $CONTAINER"
     echo "Stop:  scripts/prover.sh $NETWORK --stop"
     exit 0
+  fi
+  # If the container has died there is nothing left to wait for, and the logs
+  # are the answer — don't spend two minutes discovering that.
+  if [ -z "$($DOCKER ps -q --filter "name=^${CONTAINER}$" 2>/dev/null)" ]; then
+    echo
+    echo "The prover container exited. Last logs:" >&2
+    $DOCKER logs --tail 40 "$CONTAINER" >&2 || true
+    exit 1
   fi
   printf .
   sleep 2
