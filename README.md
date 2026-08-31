@@ -41,7 +41,7 @@ The honest answer to "can I use this". Deliberately placed before the design, so
 
 ### What is blocked, and by what
 
-One thing, and it is not in this repository.
+One thing, and it is not in this repository — though it turns out to be something you run rather than something you are given.
 
 Registering with the pool, depositing into it and withdrawing from it are *proven* actions: the client builds a ZK proof and a proving service returns it. There is **no public proving or indexing service on Sepolia**. That is not our finding — it is what StarkWare's own reference app says, in the `.env.local` it ships:
 
@@ -53,7 +53,13 @@ Everything upstream of that line is proven working, including the part that was 
 
 The cost of that choice is stated rather than buried: the sender pays the pool's fee, **2 STRK per submit on Sepolia and 6 on mainnet**, and the account is no longer STRK-free, which is a linkage the manager-paid design avoided. Airlock had already spent that one — the user funds this same account to deploy it.
 
-**To unblock:** point `VITE_AIRLOCK_PROVER_URL` and `VITE_AIRLOCK_INDEXER_URL` at a live instance. The live test then asserts a real registration instead of asserting where it stops.
+**To unblock:** run the prover yourself. StarkWare publishes it as a public image, and it needs exactly one thing — a Starknet RPC node speaking spec v0.10, which public providers do serve:
+
+```sh
+scripts/prover.sh sepolia          # then VITE_AIRLOCK_PROVER_URL=http://localhost:3000
+```
+
+That is enough for the register leg on its own: `registerWithPool` constructs a discovery provider but never calls it, because registration publishes a viewing key and discovers nothing. Deposit and withdraw do need the indexer, and the indexer is the more expensive half — it tails blocks over a WebSocket that no public RPC exposes, so it wants a Pathfinder node of its own. See [docs/prover.md](docs/prover.md) for the images, the version matrix, and which leg needs which service.
 
 ## Why this exists
 
