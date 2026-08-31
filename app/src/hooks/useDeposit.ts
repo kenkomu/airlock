@@ -15,6 +15,7 @@
 
 import { useCallback, useRef, useState } from 'react';
 import {
+  asMissingProver,
   asNeedsGas,
   asPendingDeposit,
   ensureDerivedAccountDeployed,
@@ -128,9 +129,12 @@ export function useDeposit(deps: DepositDeps): DepositSession {
           setState({ phase: 'pending', pendingNetWei: interrupted.pendingNetWei });
           return;
         }
+        /* Translate the one failure that is expected and is not the user's
+           doing, before it reaches the screen as raw transport. */
+        const noProver = asMissingProver(e);
         setState({
           phase: 'error',
-          message: e instanceof Error ? e.message : String(e),
+          message: noProver ?? (e instanceof Error ? e.message : String(e)),
           steps: steps.current,
         });
       }

@@ -155,6 +155,35 @@ export function asNeedsGas(err: unknown): NeedsGas | null {
   return { address: e.address ?? '', needWei: e.needWei ?? 0n };
 }
 
+/* The proven legs stopped because there is no proving service to reach.
+ *
+ * The SDK reports this as raw transport: `Proving service HTTP 404:` with an
+ * empty body when the unset default resolves to the app's own origin, or a URL
+ * parse failure on `/prover` in a static build. Both are accurate and both are
+ * useless to the person reading them — they describe a network result, not the
+ * fact that no public proving service exists to point at.
+ *
+ * That distinction is the whole thing. A transport error invites the reader to
+ * suspect their own transfer, their funds, or their wallet. None of those are
+ * involved: registering and depositing are proven actions, the proof has to be
+ * made somewhere, and there is nowhere public to make it. Saying so is the same
+ * obligation this app takes on everywhere else. */
+export function asMissingProver(err: unknown): string | null {
+  const m = err instanceof Error ? err.message : String(err);
+  const isProver =
+    /proving service/i.test(m) ||
+    /from ['"`]?\/prover/i.test(m) ||
+    /prover/i.test(m);
+  if (!isProver) return null;
+  return (
+    'No proving service. Registering with the pool and moving funds into it are ' +
+    'both proven actions, and there is no public prover to point at — so this ' +
+    'stops here by design, not by fault. Nothing was moved and nothing was lost; ' +
+    'the account created in the step above is still yours. Running a prover ' +
+    'yourself is one command — see docs/prover.md.'
+  );
+}
+
 /* What a one-time account deployment costs, with room to spare.
  *
  * The engine's own display estimate is 0.5 STRK. Asking for that rather than a
