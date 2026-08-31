@@ -1,6 +1,6 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import { vendorAlias } from './vendorAlias'
+import { vendorAlias } from './vendorAlias.js'
 
 /* The site is served from a project page — kenkomu.github.io/airlock/ — so every
  * asset URL needs that prefix. It is an env var rather than a literal because

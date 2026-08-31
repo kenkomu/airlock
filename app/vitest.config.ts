@@ -1,5 +1,5 @@
 import { defineConfig } from 'vitest/config';
-import { vendorAlias } from './vendorAlias';
+import { vendorAlias } from './vendorAlias.js';
 
 export default defineConfig({
   /* Must mirror vite.config.ts, or a test that reaches engine code fails on a
