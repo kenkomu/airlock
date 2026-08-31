@@ -31,6 +31,8 @@ const OBSERVED_SPONSOR_FEE = '6 STRK';
 const OBSERVED_NETWORK_FEE = '3.47 STRK';
 const OBSERVED_TX = '0x03f52e1bddd716344f5dd3c43ba2b81eb1aefb0bc7791aba3e54051b40963a50';
 import type { WalletSession } from '../hooks/useWallet';
+import type { EvmIdentitySession } from '../hooks/useEvmIdentity';
+import { shortAddress } from '../lib/identity';
 import { IconLock } from './Icons';
 
 /* Parses a human amount into base units without going through a float. 0.1 is
@@ -56,10 +58,16 @@ const MAINNET = NETWORKS.find((n) => n.chainId === SN_MAIN)!;
 
 export function DenominatePanel({
   session,
+  evmSession,
   onConnect,
   sizes,
 }: {
   session: WalletSession;
+  /* Needed only to tell two different "cannot act yet" states apart. The header
+     shows a pill the moment an EVM identity is derived, so a panel that judges
+     readiness on the Starknet session alone tells a connected user to connect —
+     the contradiction this prop exists to remove. */
+  evmSession: EvmIdentitySession;
   onConnect: () => void;
   /* Note sizes counted live from the pool, or null while the scan is in
      flight. Passed down rather than fetched here: the anonymity panel already
@@ -71,6 +79,11 @@ export function DenominatePanel({
   /* Fall back to mainnet so the panel is usable unconnected. */
   const network = conn?.network ?? MAINNET;
   const preview = conn === null;
+  /* A derived account is not the same as no account. It exists, the header
+     names it, and it simply cannot spend here until its first deposit gives it
+     a shielded balance. Saying "connect a wallet" to someone looking at their
+     own address is the kind of untruth this app is about. */
+  const derived = evmSession.state.phase === 'ready' ? evmSession.state.identity : null;
 
   const [bucketer, setBucketer] = useState<Bucketer | null>(null);
   /* Preview opens with a worked example already in the field. An empty input
@@ -429,7 +442,19 @@ export function DenominatePanel({
 
       <StageLine stage={stage} network={network} bucketer={bucketer} />
 
-      {preview ? (
+      {preview && derived ? (
+        <>
+          <p className="muted">
+            Your derived account{' '}
+            <span className="mono">{shortAddress(derived.starknetAddress)}</span> holds
+            nothing in the pool yet, so there is no shielded balance to split.
+            Move funds in first, or connect a Starknet wallet that already has some.
+          </p>
+          <button className="btn btn-primary btn-lg" onClick={onConnect} type="button">
+            <IconLock /> Connect a Starknet wallet
+          </button>
+        </>
+      ) : preview ? (
         <button className="btn btn-primary btn-lg" onClick={onConnect} type="button">
           <IconLock /> Connect a wallet to do this for real
         </button>

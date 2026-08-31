@@ -103,6 +103,7 @@ export default function App() {
         <Boundary name="Denominate">
           <DenominatePanel
             session={session}
+            evmSession={evmSession}
             onConnect={() => setPickerOpen(true)}
             sizes={sizes}
           />
