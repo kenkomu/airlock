@@ -7,6 +7,45 @@ needs a `PROVER_URL`. Note discovery needs an `INDEXER_URL` alongside it.
 Neither has a public instance. That is the single thing standing between this
 app and a full round trip, so it is worth writing down exactly what is true.
 
+## First: check whether you need one at all
+
+Airlock already moves money on mainnet without a prover, and has four accepted
+transactions to show for it. The split panel calls
+`account.strk20InvokeTransaction(actions)` on a `WalletAccountV6` — the Starknet
+Wallet API — and the wallet does the rest. StarkWare's own words:
+
+> The wallet discovers notes, builds the transaction, generates the proof, and
+> submits it. […] Most dapps do not need to operate proving infrastructure.
+
+Through that route a dapp can **shield, transfer privately, withdraw, and swap**,
+with no viewing key, no note management and no proving service. It is the
+recommended route for user-facing private dapps, and it is the one this project
+already uses for everything it does on chain today.
+
+So the prover question is narrower than it looks. It applies to exactly one
+path: the bridge.
+
+### Why the bridge cannot ask a wallet
+
+The bridge's premise is arriving from another chain with no Starknet wallet at
+all. The Starknet account is derived in the browser from an EVM signature — it
+is a key, not a wallet, and there is nothing to delegate proving to. That is
+precisely why `bridge-core` takes the SDK route, and the SDK route is the one
+that needs a `PROVER_URL`.
+
+Three ways out, in increasing cost:
+
+| | Cost | Works today |
+|---|---|---|
+| Ask the user's Starknet wallet to do the deposit leg | none | yes — this is the path already proven on mainnet |
+| Run the prover yourself (below) | a machine with AVX-512 | yes |
+| Wait for a hosted endpoint | none | no — [#956][956] is unanswered |
+
+The first trades the product's premise for zero infrastructure: a user who has a
+privacy-enabled Starknet wallet does not need the derived account at all. Whether
+that trade is worth making is a product decision, not a technical one, and it is
+recorded here rather than taken.
+
 ## There is no hosted endpoint
 
 Every documented source points at a value you supply rather than one you are
