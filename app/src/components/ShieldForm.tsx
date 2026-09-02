@@ -48,6 +48,42 @@ export function ShieldForm({
      notice at the top of the page covers that case in full. */
   if (conn.support.kind === 'unsupported' || !conn.network) return null;
 
+  /* An unregistered account gets an explanation, not a form.
+  
+     This started as a form for everyone, on the belief that a first deposit
+     registers you. It does not, and the wallet API spec is explicit about who
+     does: every one of its four STRK20 methods lists NOT_REGISTERED as an
+     error — including `strk20Balances`, which is only a read — and the note on
+     InvokeTransaction reads "Registration into the pool is transparent — if
+     the user is not registered, NOT_REGISTERED is returned."
+  
+     So there is no dapp-side path to registration at all. The wallet holds the
+     viewing key, `set_viewing_key` is what writes it, and no action in the API
+     asks for that. Confirmed on chain: registrations on Sepolia arrive as
+     ViewingKeySet and Deposit in one transaction sent by the user's own
+     account, which is the shape the SDK emits under `autoRegister` — an option
+     only whoever assembles the bundle can set, and for an action array we hand
+     over, that is the wallet.
+  
+     Showing the form anyway would be offering a button whose only possible
+     outcome is the error the user is already looking at. */
+  if (conn.support.kind === 'unregistered')
+    return (
+      <section className="acct-group shield">
+        <div className="acct-group-h">
+          <IconLock />
+          <strong>Not registered yet</strong>
+        </div>
+        <p className="muted sm">
+          The pool has no viewing key for this account, and only{' '}
+          {conn.wallet.name} can set one — no dapp can, including this one. Do
+          your first shield from {conn.wallet.name}'s own privacy screen; it
+          registers and shields in a single transaction. After that everything
+          here works, including shielding from this panel.
+        </p>
+      </section>
+    );
+
   const run = async () => {
     if (amount === null || amount <= 0n || over) return;
     try {

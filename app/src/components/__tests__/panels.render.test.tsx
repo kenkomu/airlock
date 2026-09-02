@@ -144,7 +144,7 @@ describe('ShieldForm', () => {
       bucketers: [],
     },
     provider: {} as never,
-    support: { kind: 'unregistered' as const },
+    support: { kind: 'ready' as const },
     balances: [],
   } as unknown as Parameters<typeof ShieldForm>[0]['conn'];
 
@@ -154,6 +154,20 @@ describe('ShieldForm', () => {
     decimals: 18,
     amount: 3029n * 10n ** 18n,
   };
+
+  it('explains, rather than offering a button, when not registered', () => {
+    /* There is no dapp-side path to registration — see docs/registration.md.
+       A form here could only ever produce the NOT_REGISTERED the user is
+       already looking at. */
+    const unreg = { ...conn, support: { kind: 'unregistered' as const } };
+    const html = renderToStaticMarkup(
+      <ShieldForm conn={unreg as never} pub={[strk]} onShielded={() => {}} />,
+    );
+    expect(html).toContain('Not registered yet');
+    expect(html).toContain('Ready');
+    /* No amount box, because there is nothing useful to type into it. */
+    expect(html).not.toContain('<input');
+  });
 
   it('renders, and offers the public balance it was given', () => {
     const html = renderToStaticMarkup(
