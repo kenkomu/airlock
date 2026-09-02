@@ -10,7 +10,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { isNamedRefusal } from '../denominate';
+import { isNamedRefusal, isNotRegistered } from '../denominate';
 
 describe('isNamedRefusal', () => {
   it('does not treat a shrug as a refusal', () => {
@@ -58,5 +58,46 @@ describe('isNamedRefusal', () => {
     /* The real message is "An error occurred (UNKNOWN_ERROR)" — the shrug has to
        win over the surrounding prose, or the wrapper reads as a reason. */
     expect(isNamedRefusal(new Error('Simulation failed: An error occurred (UNKNOWN_ERROR)'))).toBe(false);
+  });
+});
+
+/* The one refusal a user can clear themselves.
+ *
+ * Found in a live Sepolia test: the panel showed a plain-English banner saying
+ * the account had never shielded, and directly beneath it "The pool refused
+ * this transaction in simulation: An error occurred (NOT_REGISTERED)". Both
+ * described the same condition; only one was readable, and the unreadable one
+ * looked like the real failure. The tester asked what had gone wrong. */
+describe('isNotRegistered', () => {
+  it('recognises the message the pool actually sent', () => {
+    /* Verbatim from the screenshot. */
+    expect(isNotRegistered(new Error('An error occurred (NOT_REGISTERED)'))).toBe(true);
+  });
+
+  it('recognises the felt when the wallet did not decode it', () => {
+    /* 'NOT_REGISTERED' as a Cairo short string. Same fact, other spelling. */
+    expect(isNotRegistered(new Error('0x4e4f545f52454749535445524544'))).toBe(true);
+    expect(isNotRegistered(new Error('reverted with 4E4F545F52454749535445524544'))).toBe(true);
+  });
+
+  it('does not fire on every other refusal', () => {
+    /* This message tells the user to go and shield. Saying that to someone
+       who is already registered and merely short of funds would send them off
+       to fix something that is not broken. */
+    for (const m of [
+      'NOT_ON_LADDER',
+      'INSUFFICIENT_BALANCE',
+      'UNDEPOSITED_OPEN_NOTES',
+      'An error occurred (UNKNOWN_ERROR)',
+      '',
+    ]) {
+      expect(isNotRegistered(new Error(m)), m).toBe(false);
+    }
+  });
+
+  it('is checked before the generic refusal, which would also match it', () => {
+    /* isNamedRefusal matches /not registered/i, so ordering is the whole fix:
+       if the generic branch ran first the user would still see the felt. */
+    expect(isNamedRefusal(new Error('An error occurred (NOT_REGISTERED)'))).toBe(true);
   });
 });

@@ -98,6 +98,23 @@ export async function denominate(opts: DenominateOptions): Promise<string> {
          what it cost the last time and what the pool would charge to find out. */
       if (isUnsupported(e)) {
         /* Nothing to report — the wallet simply has no dry run. */
+      } else if (isNotRegistered(e)) {
+        /* A refusal, but not one to report in the pool's words.
+        
+           Left untranslated this arrives as NOT_REGISTERED beside a banner
+           that already explains the same condition in English — two voices for
+           one fact, and the jargon one is the one that looks like the failure.
+           It is also not something the user did wrong, and not something this
+           app can fix for them: registration happens inside the wallet, on the
+           first shield. So say that, and say what it cost, which is nothing. */
+        return failed(
+          stage,
+          'This account has not registered with the pool yet, so there is nothing ' +
+            'shielded here to split. Registration happens on its own the first time ' +
+            "you shield something — do that once from your wallet's privacy screen " +
+            'and come back. Nothing was signed and nothing was spent.',
+          true,
+        );
       } else if (isNamedRefusal(e)) {
         return failed(stage, `The pool refused this transaction in simulation: ${messageOf(e)}`, true);
       } else {
@@ -165,6 +182,16 @@ export function isNamedRefusal(e: unknown): boolean {
     /[A-Z][A-Z0-9]+_[A-Z0-9_]+/.test(m) ||
     /revert|assert|insufficient|not registered|invalid/i.test(m)
   );
+}
+
+/* The pool's way of saying it has never met this account.
+ *
+ * Arrives either as the short string or as the felt the wallet did not decode,
+ * so both spellings are checked. It is the second of the two failure modes
+ * documented at the top of `wallet.ts`, and the only one of them a user can
+ * clear themselves. */
+export function isNotRegistered(e: unknown): boolean {
+  return /NOT_REGISTERED|4e4f545f52454749535445524544/i.test(messageOf(e));
 }
 
 /* A user who declined is not an error state to apologise for. */
