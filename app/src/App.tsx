@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import './App.css';
 import { TransferPanel, type TransferState } from './components/TransferPanel';
+import { More } from './components/More';
 import { PrivacyReport } from './components/PrivacyReport';
 import { AnonymityPanel } from './components/AnonymityPanel';
 import { Steps } from './components/Steps';
@@ -129,12 +130,14 @@ export default function App() {
             <span className="next-up-tag">both built · neither proven</span>
           </div>
           <p className="next-up-sub">
-            The leak assessment on the right is real and runs on whatever you
-            pick. Both legs of the round trip are now built — in from another
-            chain, and back out to an address you name. Neither has yet moved
-            money on a real chain, so treat both as unproven until a transfer
-            has landed.
+            Both legs are built — in from another chain, and back out to an
+            address you name. Neither has moved money on a real chain yet.
           </p>
+          <More label="So what is real here?">
+            The leak assessment on the right runs for real, on whatever you
+            pick. It is the routing either side of it that is unproven, and it
+            stays labelled that way until a transfer has landed.
+          </More>
 
           {/* Transfer and its report are a pair and belong side by side: the
               report describes whatever the panel currently proposes. */}

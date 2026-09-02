@@ -3030,3 +3030,42 @@ body {
 .shield .btn {
   width: 100%;
 }
+
+/* ---------- disclosure: the claim stays, the reasoning folds away ---------- */
+.more {
+  margin-top: calc(var(--s2) * -1);
+}
+.more-s {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  font-size: 0.8125rem;
+  color: var(--muted);
+  border-bottom: 1px dotted var(--border);
+  width: fit-content;
+  list-style: none;
+  padding: 2px 0;
+}
+.more-s::-webkit-details-marker {
+  display: none;
+}
+.more-s::after {
+  content: '›';
+  transition: transform 0.15s ease;
+  display: inline-block;
+}
+.more[open] .more-s::after {
+  transform: rotate(90deg);
+}
+.more-s:hover {
+  color: var(--fg);
+}
+.more-b {
+  margin-top: var(--s2);
+  font-size: 0.8125rem;
+  line-height: 1.55;
+  color: var(--muted);
+  border-left: 2px solid var(--border-soft);
+  padding-left: var(--s3);
+}

@@ -384,15 +384,12 @@ export function WalletNotice({ session }: { session: WalletSession }) {
     const outdated = v !== undefined && isBelow(v, STRK20_MIN_READY);
     return (
       <p className="notice notice-blocked sm" role="status">
-        <strong>This wallet can't make private transfers yet.</strong> It
-        connected fine — it just doesn't answer the STRK20 calls, so there is
-        nothing here it can move.{' '}
+        <strong>This wallet can't make private transfers yet.</strong>{' '}
         {outdated && isFirefox() ? (
           <>
             You're on <strong>{conn.wallet.name} {v}</strong> and this needs{' '}
-            <strong>{STRK20_MIN_READY}</strong> — but Firefox's build stops at
-            5.30.0, so there is no update to install here. Ready ships{' '}
-            {STRK20_MIN_READY} on Chrome, Brave and Edge.{' '}
+            <strong>{STRK20_MIN_READY}</strong>, which Firefox's build does not
+            ship. Use Chrome, Brave or Edge.{' '}
             <a
               href="https://chromewebstore.google.com/detail/ready-wallet-formerly-arg/dlcobpjiigpikoobohmabehhmhfoodbb"
               target="_blank"
@@ -430,10 +427,8 @@ export function WalletNotice({ session }: { session: WalletSession }) {
   if (conn.support.kind === 'unregistered')
     return (
       <p className="notice notice-leak sm" role="status">
-        <strong>This account isn't set up for private balances yet.</strong> An
-        account registers with the pool once, the first time it shields
-        something, and your wallet handles that for you. Shield any amount from
-        your wallet's privacy screen and your balance will show up here.
+        <strong>Nothing shielded yet.</strong> Open the account menu above and
+        shield any amount — the first one registers you with the pool.
       </p>
     );
 

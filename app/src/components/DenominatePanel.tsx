@@ -33,6 +33,7 @@ const OBSERVED_TX = '0x03f52e1bddd716344f5dd3c43ba2b81eb1aefb0bc7791aba3e54051b4
 import type { WalletSession } from '../hooks/useWallet';
 import type { EvmIdentitySession } from '../hooks/useEvmIdentity';
 import { IconLock } from './Icons';
+import { More } from './More';
 
 /* `plan` is a view function. It needs a provider and nothing else — no wallet,
    no signature, no account. So the whole preview runs before anyone connects,
@@ -418,9 +419,13 @@ export function DenominatePanel({
         {[1000n, 500n, 250n, 100n, 50n, 25n, 10n, 5n, 1n]
           .map((r) => format(r * bucketer.unit, bucketer).replace(` ${bucketer.symbol}`, ''))
           .join(' · ')}{' '}
-        {bucketer.symbol}. Anything that is not an exact sum of these is refused
-        rather than rounded.
+        {bucketer.symbol}
       </p>
+      <More label="Why only these?">
+        An amount that is not an exact sum of them is refused rather than
+        rounded. Rounding would produce a number nobody else is using, and a
+        unique amount is the easiest thing in the world to follow.
+      </More>
 
       {/* The bill, named in the same voice as the leaks. Everything else in this
           panel tells you what a privacy step costs your anonymity; this tells
@@ -428,17 +433,19 @@ export function DenominatePanel({
           watched 6 STRK leave after splitting 8.4. */}
       {legs && !preview && (
         <div className="notice notice-leak" role="note">
-          <strong>Gas comes out of your private balance, on top of the amount above.</strong>{' '}
-          Your wallet pays through a relayer so your public address never appears
-          as the payer, and bills the shielded side for it. On our first mainnet
-          split that was <span className="mono">{OBSERVED_SPONSOR_FEE}</span>{' '}
-          against a <span className="mono">{OBSERVED_NETWORK_FEE}</span> network
-          fee —{' '}
-          <a className="tx-link" href={txUrl(network, OBSERVED_TX)} target="_blank" rel="noreferrer">
-            check it
-          </a>
-          . The premium buys the anonymity. Yours may differ; your wallet shows
-          the exact figure before you sign.
+          <strong>Gas comes out of your private balance</strong>, on top of the
+          amount above. Your wallet shows the exact figure before you sign.
+          <More label="How much, and why">
+            Your wallet pays through a relayer, so your public address never
+            appears as the payer, and bills the shielded side for it. That
+            premium is what buys the anonymity. On our first mainnet split it
+            was <span className="mono">{OBSERVED_SPONSOR_FEE}</span> against a{' '}
+            <span className="mono">{OBSERVED_NETWORK_FEE}</span> network fee —{' '}
+            <a className="tx-link" href={txUrl(network, OBSERVED_TX)} target="_blank" rel="noreferrer">
+              check it
+            </a>
+            .
+          </More>
         </div>
       )}
 
@@ -449,8 +456,7 @@ export function DenominatePanel({
           <p className="muted">
             Your derived account{' '}
             <span className="mono">{short(derived.starknetAddress)}</span> holds
-            nothing in the pool yet, so there is no shielded balance to split.
-            Move funds in first, or connect a Starknet wallet that already has some.
+            nothing in the pool yet. Connect a Starknet wallet that does.
           </p>
           <button className="btn btn-primary btn-lg" onClick={onConnect} type="button">
             <IconLock /> Connect a Starknet wallet
@@ -475,9 +481,7 @@ export function DenominatePanel({
           any of it comes back as notes, so "which contract" is a fair question
           and the answer should be checkable before signing, not after. */}
       <p className="muted sm">
-        Your withdrawal passes through this contract, which splits it and hands
-        every part straight back to the pool in the same transaction. It has no
-        owner and cannot be upgraded —{' '}
+        Routed through this contract — no owner, not upgradeable —{' '}
         <a
           className="tx-link mono"
           href={contractUrl(network, bucketer.address)}
@@ -837,15 +841,14 @@ function AwaitingSignature() {
 
   return (
     <div className="notice notice-leak" role="status">
-      <strong>Your wallet has not answered.</strong> It should have asked you to
-      approve this by now. Open the wallet extension from your browser toolbar —
-      the request is usually queued there when the popup does not appear, or has
-      opened behind this window.
+      <strong>Your wallet has not answered.</strong> Open the extension from
+      your browser toolbar — the request is usually queued there when the popup
+      does not appear.
       {waited >= 30 && (
         <>
           {' '}
-          If there is nothing waiting, the request was dropped: reload the page
-          and try again. Nothing has been signed, and nothing has been spent.
+          If nothing is waiting, the request was dropped. Reload and try again —
+          nothing was signed and nothing was spent.
         </>
       )}
     </div>

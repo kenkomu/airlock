@@ -85,9 +85,7 @@ export function PrivacyReport({ report, fromName, toName }: Props) {
 
       <footer className="card-f">
         <p className="muted sm">
-          Worst factor decides the verdict — privacy does not average. A perfect
-          amount does not rescue a two-minute round trip, and neither survives an
-          empty pool.
+          Worst factor decides the verdict — privacy does not average.
         </p>
       </footer>
     </section>
