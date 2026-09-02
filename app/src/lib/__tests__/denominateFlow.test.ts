@@ -119,3 +119,59 @@ describe('what the panel says when simulation refuses', () => {
     expect(stages.map((s) => s.at)).not.toContain('unverified');
   });
 });
+
+/* Shielding, which had the opposite bug: it blocked on a dry run it should
+   have carried on past.
+ *
+ * The claim in the first version was that a deposit registers the account. It
+ * does not — registration is `set_viewing_key` in the pool, write-once, and
+ * there is no method for it among the four the wallet API exposes. So the dry
+ * run refusing with NOT_REGISTERED says nothing about whether the wallet will
+ * register on the way through, and stopping there stops the one transaction
+ * that might clear the condition. */
+describe('shielding past an unregistered dry run', () => {
+  it('warns and carries on, rather than blocking', async () => {
+    const { shield } = await import('../shield');
+    const stages: { at: string }[] = [];
+    const hash = await shield({
+      account: {
+        strk20PrepareInvoke: async () => {
+          throw new Error('An error occurred (NOT_REGISTERED)');
+        },
+        strk20InvokeTransaction: async () => ({ transaction_hash: '0xdeposit' }),
+      } as never,
+      provider: { waitForTransaction: async () => ({}) } as never,
+      token: '0xstrk',
+      amount: 200n * 10n ** 18n,
+      onStage: (s) => stages.push(s as never),
+    });
+
+    expect(hash).toBe('0xdeposit');
+    /* Warned... */
+    expect(stages.map((s) => s.at)).toContain('unregistered');
+    /* ...and not stopped. */
+    expect(stages.map((s) => s.at)).toContain('awaiting-signature');
+    expect(stages.map((s) => s.at)).not.toContain('failed');
+  });
+
+  it('still stops for a refusal that is actually about the deposit', async () => {
+    const { shield } = await import('../shield');
+    const stages: { at: string; message?: string }[] = [];
+    await expect(
+      shield({
+        account: {
+          strk20PrepareInvoke: async () => {
+            throw new Error('INSUFFICIENT_BALANCE');
+          },
+          strk20InvokeTransaction: async () => ({ transaction_hash: '0xnope' }),
+        } as never,
+        provider: {} as never,
+        token: '0xstrk',
+        amount: 10n ** 30n,
+        onStage: (s) => stages.push(s as never),
+      }),
+    ).rejects.toThrow(/INSUFFICIENT_BALANCE/);
+    expect(stages.find((s) => s.at === 'failed')?.message).toContain('INSUFFICIENT_BALANCE');
+    expect(stages.map((s) => s.at)).not.toContain('awaiting-signature');
+  });
+});

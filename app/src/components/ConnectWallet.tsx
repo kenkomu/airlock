@@ -427,8 +427,9 @@ export function WalletNotice({ session }: { session: WalletSession }) {
   if (conn.support.kind === 'unregistered')
     return (
       <p className="notice notice-leak sm" role="status">
-        <strong>Nothing shielded yet.</strong> Open the account menu above and
-        shield any amount — the first one registers you with the pool.
+        <strong>Nothing shielded yet.</strong> Set up private balances in{' '}
+        {conn.wallet.name} once — only the wallet can register an account — then
+        shield from the account menu above.
       </p>
     );
 

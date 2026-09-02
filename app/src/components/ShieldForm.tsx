@@ -73,8 +73,7 @@ export function ShieldForm({
         <strong>Shield funds</strong>
       </div>
       <p className="muted sm">
-        Moves public {token.symbol} into the pool, to yourself. The first one
-        also registers the account.
+        Moves public {token.symbol} into the pool, to yourself.
       </p>
 
       <label className="field">
@@ -128,6 +127,15 @@ export function ShieldForm({
         {over && (
           <p className="err">
             That is more than you hold publicly in {token.symbol}.
+          </p>
+        )}
+        {stage.at === 'unregistered' && (
+          <p className="notice notice-leak sm">
+            Your wallet says this account isn't registered with the pool yet.
+            Registering is something only the wallet can do — there is no method
+            for it in the API — so it may happen as this goes through, or it may
+            refuse. Trying costs nothing until you sign. If it refuses, set up
+            private balances in {conn.wallet.name} first.
           </p>
         )}
         {stage.at === 'failed' && <p className="err">{stage.message}</p>}

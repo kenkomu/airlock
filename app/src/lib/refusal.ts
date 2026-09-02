@@ -90,7 +90,7 @@ export function signatureMessage(e: unknown): string {
 /* The one refusal that comes with its own remedy. Shared so that shielding and
    splitting cannot describe the same condition two different ways. */
 export const NOT_REGISTERED_MESSAGE =
-  'This account has not registered with the pool yet, so there is nothing ' +
-  'shielded here to split. Registration happens on its own the first time ' +
-  'you shield something — shield any amount from the account panel above, ' +
-  'then come back. Nothing was signed and nothing was spent.';
+  'This account is not registered with the pool, so there is nothing shielded ' +
+  'here to split. Only your wallet can register it — there is no method for it ' +
+  'in the wallet API — so set up private balances there once, then come back. ' +
+  'Nothing was signed and nothing was spent.';

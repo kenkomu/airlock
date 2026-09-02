@@ -13,17 +13,33 @@
  * approve, produces the proof, and pays through a relayer. There is no prover
  * to run and no contract of ours in the path.
  *
- * The reason it matters more than convenience: registration with the pool
- * happens on the first deposit. So this is also the fix for the NOT_REGISTERED
- * the split panel reports, and the only one the app can carry out itself.
+ * What this does NOT do is register the account, which an earlier version of
+ * this comment claimed outright. Registration is `set_viewing_key` in the pool
+ * — a separate, write-once operation that encrypts the user's viewing key for
+ * the auditor — and the Wallet API has no method for it. Only four exist:
+ * InvokeTransaction, PrepareInvoke, Balances, ShadowAccountCommitment. The SDK
+ * can prepend it to a bundle under `autoRegister`, but that is the route that
+ * needs a prover.
+ *
+ * So the wallet owns registration and does it on its own terms. What this can
+ * do is decline to stand in the way of the transaction that might carry it.
  */
 
 import type { RpcProvider, STRK20_ACTION, WalletAccountV6 } from 'starknet';
-import { isNamedRefusal, isUnsupported, messageOf, signatureMessage } from './refusal';
+import {
+  isNamedRefusal,
+  isNotRegistered,
+  isUnsupported,
+  messageOf,
+  signatureMessage,
+} from './refusal';
 
 export type ShieldStage =
   | { at: 'idle' }
   | { at: 'simulating' }
+  /* The dry run says the account is not registered. Not a failure — see the
+     call site — so the flow carries on and the panel warns instead. */
+  | { at: 'unregistered' }
   | { at: 'awaiting-signature' }
   | { at: 'submitted'; hash: string }
   | { at: 'done'; hash: string }
@@ -48,10 +64,7 @@ export async function shield(opts: ShieldOptions): Promise<string> {
   const actions: STRK20_ACTION[] = [{ type: 'deposit', token, amount: `0x${amount.toString(16)}` }];
 
   /* Free, unsigned, and the last chance to fail before the user pays for
-     proving. Deliberately NOT symmetric with the split's dry run: there is no
-     NOT_REGISTERED case to translate here, because this is the transaction
-     that registers you. If the pool refuses a first deposit it is for a
-     reason the user has to see verbatim. */
+     proving. */
   if (simulate) {
     stage({ at: 'simulating' });
     try {
@@ -60,6 +73,22 @@ export async function shield(opts: ShieldOptions): Promise<string> {
       if (isUnsupported(e)) {
         /* No dry run in this wallet. Not an error, and not a reason to block a
            wallet whose real path works. */
+      } else if (isNotRegistered(e)) {
+        /* Warned, not blocked, and the distinction is the whole point.
+        
+           An unregistered account is precisely the state a first deposit
+           exists to leave. Whether the wallet registers on the way through is
+           the wallet's business and not visible from here — there is no
+           registration method in the API to call, or to check. Note too that
+           the pool's own spelling is SENDER_NOT_REGISTERED, so a bare
+           NOT_REGISTERED is the wallet's precheck talking, not the chain.
+        
+           A dry run refusing this is therefore not evidence the real path
+           will, and blocking here would stop the one transaction that might
+           clear the condition it is complaining about. Same reasoning the
+           split's dry run already applies to a wallet whose simulate is broken
+           while its real path works. */
+        stage({ at: 'unregistered' });
       } else if (isNamedRefusal(e)) {
         stage({ at: 'failed', message: `The pool refused this deposit in simulation: ${messageOf(e)}` });
         throw new Error(messageOf(e));
