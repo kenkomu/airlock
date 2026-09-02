@@ -385,3 +385,18 @@ export function formatUnits(amount: bigint, decimals: number, places = 2): strin
   const scaled = (frac * 10n ** BigInt(places)) / base;
   return `${whole.toLocaleString()}.${scaled.toString().padStart(places, '0')}`;
 }
+
+/* Parses a human amount into base units without going through a float. 0.1 is
+   not representable in binary, and a rounding error here is a transaction that
+   reverts for reasons the user cannot possibly see.
+ 
+   Lives beside `formatUnits` because it is its inverse, and because it now has
+   two callers: the split panel, which has always had it, and the shield form,
+   which must agree with it exactly. */
+export function toBaseUnits(text: string, decimals: number): bigint | null {
+  const t = text.trim();
+  if (!/^\d*\.?\d*$/.test(t) || t === '' || t === '.') return null;
+  const [whole, frac = ''] = t.split('.');
+  if (frac.length > decimals) return null;
+  return BigInt(whole || '0') * 10n ** BigInt(decimals) + BigInt(frac.padEnd(decimals, '0') || '0');
+}

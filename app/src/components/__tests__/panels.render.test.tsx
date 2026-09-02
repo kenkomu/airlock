@@ -17,6 +17,7 @@ import { describe, expect, it } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { DenominatePanel } from '../DenominatePanel';
 import { ConnectWallet } from '../ConnectWallet';
+import { ShieldForm } from '../ShieldForm';
 import type { WalletSession } from '../../hooks/useWallet';
 import type { EvmIdentitySession } from '../../hooks/useEvmIdentity';
 
@@ -123,5 +124,59 @@ describe('the account sheet', () => {
       />,
     );
     expect(html).toContain('Connect a wallet');
+  });
+});
+
+/* The shield form, which is the newest thing here and the only one that can
+   move money from the account panel. */
+describe('ShieldForm', () => {
+  const conn = {
+    wallet: { id: 'ready', name: 'Ready' },
+    walletVersion: '5.33.8',
+    account: {} as never,
+    address: '0x063b56b186b5fb72c8cff15911d418c4d25529e6fc1fab4d98f75a13c0c7734e',
+    chainId: '0x534e5f5345504f4c4941',
+    network: {
+      name: 'Starknet Sepolia',
+      chainId: '0x534e5f5345504f4c4941',
+      explorer: 'https://sepolia.voyager.online',
+      tokens: [],
+      bucketers: [],
+    },
+    provider: {} as never,
+    support: { kind: 'unregistered' as const },
+    balances: [],
+  } as unknown as Parameters<typeof ShieldForm>[0]['conn'];
+
+  const strk = {
+    token: '0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d',
+    symbol: 'STRK',
+    decimals: 18,
+    amount: 3029n * 10n ** 18n,
+  };
+
+  it('renders, and offers the public balance it was given', () => {
+    const html = renderToStaticMarkup(
+      <ShieldForm conn={conn} pub={[strk]} onShielded={() => {}} />,
+    );
+    expect(html).toContain('Shield');
+    /* The figure on screen has to be the one passed in, not a second read. */
+    expect(html).toContain('3,029');
+    expect(html).toContain('STRK');
+  });
+
+  it('says nothing at all when there is nothing public to shield', () => {
+    /* An empty form under "Nothing shielded yet" would be two dead ends
+       stacked. */
+    expect(renderToStaticMarkup(<ShieldForm conn={conn} pub={[]} onShielded={() => {}} />)).toBe('');
+  });
+
+  it('stays out of the way of a wallet that cannot do STRK20', () => {
+    /* The notice at the top of the page explains that case in full, and a
+       button that cannot work is worse than no button. */
+    const old = { ...conn, support: { kind: 'unsupported' as const, message: 'Unknown request type' } };
+    expect(
+      renderToStaticMarkup(<ShieldForm conn={old as never} pub={[strk]} onShielded={() => {}} />),
+    ).toBe('');
   });
 });

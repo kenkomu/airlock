@@ -10,7 +10,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { isNamedRefusal, isNotRegistered } from '../denominate';
+import { isNamedRefusal, isNotRegistered } from '../refusal';
 
 describe('isNamedRefusal', () => {
   it('does not treat a shrug as a refusal', () => {

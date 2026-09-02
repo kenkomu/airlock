@@ -12,7 +12,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { fetchPlan } from '../lib/actions';
 import { denominate, format, type Stage } from '../lib/denominate';
 import { NETWORKS, SN_MAIN, bucketerFor, contractUrl, txUrl, type Bucketer, type Network } from '../lib/networks';
-import { providerFor, short } from '../lib/wallet';
+import { providerFor, short, toBaseUnits } from '../lib/wallet';
 import { recordSplit } from '../lib/history';
 import { crowdAt, type SizeCount } from '../lib/pool';
 
@@ -33,17 +33,6 @@ const OBSERVED_TX = '0x03f52e1bddd716344f5dd3c43ba2b81eb1aefb0bc7791aba3e54051b4
 import type { WalletSession } from '../hooks/useWallet';
 import type { EvmIdentitySession } from '../hooks/useEvmIdentity';
 import { IconLock } from './Icons';
-
-/* Parses a human amount into base units without going through a float. 0.1 is
-   not representable in binary, and a rounding error here is a transaction that
-   reverts NOT_ON_LADDER for reasons the user cannot possibly see. */
-function toBaseUnits(text: string, decimals: number): bigint | null {
-  const t = text.trim();
-  if (!/^\d*\.?\d*$/.test(t) || t === '' || t === '.') return null;
-  const [whole, frac = ''] = t.split('.');
-  if (frac.length > decimals) return null;
-  return BigInt(whole || '0') * 10n ** BigInt(decimals) + BigInt(frac.padEnd(decimals, '0') || '0');
-}
 
 /* `plan` is a view function. It needs a provider and nothing else — no wallet,
    no signature, no account. So the whole preview runs before anyone connects,

@@ -24,17 +24,20 @@ import { contractUrl, txUrl } from '../lib/networks';
 import { ago, splitsFor, type Split } from '../lib/history';
 import { IconLock, IconWallet } from './Icons';
 import { useFocusTrap } from '../hooks/useFocusTrap';
+import { ShieldForm } from './ShieldForm';
 
 export function AccountSheet({
   conn,
   shielded,
   onClose,
   onDisconnect,
+  onShielded,
 }: {
   conn: Connection;
   shielded: ShieldedBalance[];
   onClose: () => void;
   onDisconnect: () => void;
+  onShielded: () => void;
 }) {
   const dialogRef = useRef<HTMLDivElement>(null);
   useFocusTrap(dialogRef);
@@ -190,12 +193,15 @@ export function AccountSheet({
           />
         )}
 
-        {!lead && (
-          <p className="muted sm">
-            {conn.support.kind === 'unregistered'
-              ? 'This account has not shielded anything yet. Shield some in your wallet and it will appear here.'
-              : 'Nothing shielded.'}
-          </p>
+        {!lead && conn.support.kind !== 'unregistered' && (
+          <p className="muted sm">Nothing shielded.</p>
+        )}
+
+        {/* Directly under the finding it answers. Someone who has just read
+            "Nothing shielded yet" should not have to go looking for the
+            control that changes it, or leave for another application. */}
+        {pub && pub.some((b) => b.amount > 0n) && (
+          <ShieldForm conn={conn} pub={pub} onShielded={onShielded} />
         )}
 
         <BalanceGroup

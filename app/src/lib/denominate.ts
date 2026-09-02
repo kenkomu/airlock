@@ -17,6 +17,14 @@ import type { STRK20_ACTION } from 'starknet';
 import type { RpcProvider, WalletAccountV6 } from 'starknet';
 import { ActionBuildError, buildDenominate, fetchPlan } from './actions';
 import type { Bucketer, Network } from './networks';
+import {
+  NOT_REGISTERED_MESSAGE,
+  isNamedRefusal,
+  isNotRegistered,
+  isUnsupported,
+  messageOf,
+  signatureMessage,
+} from './refusal';
 
 export type Stage =
   | { at: 'idle' }
@@ -107,14 +115,7 @@ export async function denominate(opts: DenominateOptions): Promise<string> {
            It is also not something the user did wrong, and not something this
            app can fix for them: registration happens inside the wallet, on the
            first shield. So say that, and say what it cost, which is nothing. */
-        return failed(
-          stage,
-          'This account has not registered with the pool yet, so there is nothing ' +
-            'shielded here to split. Registration happens on its own the first time ' +
-            "you shield something — do that once from your wallet's privacy screen " +
-            'and come back. Nothing was signed and nothing was spent.',
-          true,
-        );
+        return failed(stage, NOT_REGISTERED_MESSAGE, true);
       } else if (isNamedRefusal(e)) {
         return failed(stage, `The pool refused this transaction in simulation: ${messageOf(e)}`, true);
       } else {
@@ -153,52 +154,6 @@ export async function denominate(opts: DenominateOptions): Promise<string> {
 function failed(stage: (s: Stage) => void, message: string, recoverable: boolean): never {
   stage({ at: 'failed', message, recoverable });
   throw new Error(message);
-}
-
-function messageOf(e: unknown): string {
-  if (e instanceof Error) return e.message;
-  if (typeof e === 'string') return e;
-  if (e && typeof e === 'object' && 'message' in e) return String((e as { message: unknown }).message);
-  return String(e);
-}
-
-function isUnsupported(e: unknown): boolean {
-  return /unknown request type|not implemented|unsupported method/i.test(messageOf(e));
-}
-
-/* Did the dry run come back with an actual reason, or just a shrug?
- *
- * Cairo asserts arrive as SCREAMING_SNAKE short strings — the pool's own
- * (UNDEPOSITED_OPEN_NOTES, TOO_MANY_OPEN_NOTES_DEPOSITED, INSUFFICIENT_BALANCE)
- * and ours (NOT_ON_LADDER, LEG_COUNT_MISMATCH, CALLER_NOT_POOL). Any of those is
- * a real refusal with a real cause.
- *
- * `UNKNOWN_ERROR` is the opposite: it is what a wallet returns when it has
- * nothing to say, and treating it as a refusal invents a finding. */
-export function isNamedRefusal(e: unknown): boolean {
-  const m = messageOf(e);
-  if (/unknown[_ ]error/i.test(m)) return false;
-  return (
-    /[A-Z][A-Z0-9]+_[A-Z0-9_]+/.test(m) ||
-    /revert|assert|insufficient|not registered|invalid/i.test(m)
-  );
-}
-
-/* The pool's way of saying it has never met this account.
- *
- * Arrives either as the short string or as the felt the wallet did not decode,
- * so both spellings are checked. It is the second of the two failure modes
- * documented at the top of `wallet.ts`, and the only one of them a user can
- * clear themselves. */
-export function isNotRegistered(e: unknown): boolean {
-  return /NOT_REGISTERED|4e4f545f52454749535445524544/i.test(messageOf(e));
-}
-
-/* A user who declined is not an error state to apologise for. */
-function signatureMessage(e: unknown): string {
-  const m = messageOf(e);
-  if (/reject|denied|declined|cancel/i.test(m)) return 'Signature declined.';
-  return m;
 }
 
 export function format(amount: bigint, b: Pick<Bucketer, 'decimals' | 'symbol'>): string {

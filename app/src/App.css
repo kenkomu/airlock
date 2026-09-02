@@ -3018,3 +3018,15 @@ body {
   gap: var(--s2);
   align-items: center;
 }
+
+/* The shield form sits inside the account sheet, under the private balance it
+   answers. Set apart with a rule rather than a card, because a card inside the
+   sheet would compete with the balance card above it. */
+.shield {
+  margin-top: var(--s4);
+  padding-top: var(--s4);
+  border-top: 1px solid var(--border-soft);
+}
+.shield .btn {
+  width: 100%;
+}

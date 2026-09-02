@@ -136,6 +136,7 @@ export function ConnectWallet({
           <AccountSheet
             conn={conn}
             shielded={session.balances}
+            onShielded={session.refresh}
             onClose={() => setAccountOpen(false)}
             onDisconnect={() => {
               setAccountOpen(false);
