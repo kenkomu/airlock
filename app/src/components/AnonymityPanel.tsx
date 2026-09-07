@@ -175,8 +175,8 @@ function Ready({ snap, crowd }: { snap: AnonymitySnapshot; crowd: Concentration 
             )}
           </ul>
           <p className="muted sm">
-            You hide among people who moved <em>the same token</em>. A thin token
-            is a thin crowd however busy the pool looks overall.
+            You hide among people who moved <em>the same token</em> — a thin
+            token is a thin crowd however busy the pool looks.
           </p>
         </div>
       )}
@@ -187,14 +187,13 @@ function Ready({ snap, crowd }: { snap: AnonymitySnapshot; crowd: Concentration 
           Window: last {days} day{days === 1 ? '' : 's'} (blocks{' '}
           <span className="mono">{snap.fromBlock.toLocaleString()}</span>–
           <span className="mono">{snap.headBlock.toLocaleString()}</span>). Recent
-          counts, not lifetime totals — a lifetime figure flatters the pool,
-          because what protects you is the crowd sharing your time window.
+          counts, not lifetime totals — what protects you is the crowd sharing
+          your time window.
         </p>
         {snap.truncated && (
           <p className="notice notice-leak sm">
             Scan hit its page cap, so these are a <strong>floor</strong>, not a
-            count. The real set is larger — but a floor should not be rounded up
-            into a claim.
+            count. The real set is larger.
           </p>
         )}
       </footer>

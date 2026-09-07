@@ -372,7 +372,7 @@ export function WalletNotice({ session }: { session: WalletSession }) {
     return (
       <p className="notice notice-leak sm" role="status">
         <strong>Airlock doesn't know this network.</strong> Switch your wallet to
-        Starknet mainnet or Sepolia and it will pick up from there.
+        Starknet mainnet or Sepolia.
       </p>
     );
 
@@ -428,16 +428,14 @@ export function WalletNotice({ session }: { session: WalletSession }) {
     return (
       <p className="notice notice-leak sm" role="status">
         <strong>Nothing shielded yet.</strong> Set up private balances in{' '}
-        {conn.wallet.name} once — only the wallet can register an account — then
-        shield from the account menu above.
+        {conn.wallet.name} once, then shield from the account menu above.
       </p>
     );
 
   if (conn.support.kind === 'unknown')
     return (
       <p className="notice notice-leak sm" role="status">
-        <strong>Couldn't read your private balance.</strong> The wallet is
-        connected, so this is worth retrying before anything else.{' '}
+        <strong>Couldn't read your private balance.</strong> Worth retrying.{' '}
         <span className="mono">{conn.support.message}</span>
       </p>
     );

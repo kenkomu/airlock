@@ -130,8 +130,8 @@ export default function App() {
             <span className="next-up-tag">both built · neither proven</span>
           </div>
           <p className="next-up-sub">
-            Both legs are built — in from another chain, and back out to an
-            address you name. Neither has moved money on a real chain yet.
+            Both legs are built — in from another chain, out to an address you
+            name. Neither has moved money on a real chain yet.
           </p>
           <More label="So what is real here?">
             The leak assessment on the right runs for real, on whatever you
@@ -197,10 +197,10 @@ export default function App() {
                 </table>
               </div>
               <p className="muted sm">
-                Shielding is not private — <em>what you do afterwards</em> is.
-                The auditor holds an escrowed viewing key and can de-anonymize
-                the Starknet side; that is a tradeoff STRK20 makes deliberately,
-                and it is why this is a privacy tool rather than a mixer.
+                Shielding is not private — <em>what you do afterwards</em> is. An
+                auditor holds an escrowed viewing key and can de-anonymize the
+                Starknet side: STRK20's deliberate tradeoff, and why this is a
+                privacy tool rather than a mixer.
               </p>
             </section>
           </div>

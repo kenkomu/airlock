@@ -75,11 +75,9 @@ export function ShieldForm({
           <strong>Not registered yet</strong>
         </div>
         <p className="muted sm">
-          The pool has no viewing key for this account, and only{' '}
-          {conn.wallet.name} can set one — no dapp can, including this one. Do
-          your first shield from {conn.wallet.name}'s own privacy screen; it
-          registers and shields in a single transaction. After that everything
-          here works, including shielding from this panel.
+          Only {conn.wallet.name} can register an account — no dapp can. Shield
+          once from its own privacy screen; that transaction registers you, and
+          everything here works afterwards.
         </p>
       </section>
     );
@@ -167,10 +165,8 @@ export function ShieldForm({
         )}
         {stage.at === 'unregistered' && (
           <p className="notice notice-leak sm">
-            Your wallet says this account isn't registered with the pool yet.
-            Registering is something only the wallet can do — there is no method
-            for it in the API — so it may happen as this goes through, or it may
-            refuse. Trying costs nothing until you sign. If it refuses, set up
+            Your wallet says this account isn't registered yet, so this may
+            refuse. Nothing is spent until you sign. If it does refuse, set up
             private balances in {conn.wallet.name} first.
           </p>
         )}

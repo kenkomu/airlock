@@ -161,7 +161,7 @@ export function AccountSheet({
               <span className="wcard-bal-none">Nothing shielded yet</span>
             )}
           </div>
-          <span className="wcard-bal-k">Private balance · held as notes in the pool</span>
+          <span className="wcard-bal-k">Private balance</span>
 
           {/* Grouped like the number on a card, which is the reason cards group
               theirs: 64 unbroken hex characters cannot be read back or checked
@@ -213,7 +213,7 @@ export function AccountSheet({
           empty={
             pubFailed
               ? 'Could not read your public balance — this is not a claim that you hold nothing.'
-              : 'Nothing held publicly, of the tokens Airlock knows about.'
+              : 'Nothing held publicly.'
           }
         />
 
@@ -224,9 +224,8 @@ export function AccountSheet({
               <strong>Your splits</strong>
             </div>
             <p className="muted sm">
-              Kept in this browser only, never sent anywhere. A record of your
-              splits is exactly what an observer would want, so it does not leave
-              your machine.
+              Kept in this browser only — a record of your splits is exactly what
+              an observer would want.
             </p>
             <ul className="splitlist">
               {splits.map((sp) => (

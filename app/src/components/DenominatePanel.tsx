@@ -254,9 +254,8 @@ export function DenominatePanel({
       <section className="card card-action card-hero" aria-labelledby="den-h">
         <header className="card-h"><h2 id="den-h">Denominate</h2></header>
         <p className="err">
-          <strong>Nothing to route through on {network.name} yet.</strong> The
-          anonymizer is live on Starknet Sepolia — switch your wallet's network
-          there and this panel will pick it up. Mainnet is next.
+          <strong>Nothing to route through on {network.name} yet.</strong> Switch
+          your wallet to Starknet Sepolia.
         </p>
       </section>
     );
@@ -319,9 +318,7 @@ export function DenominatePanel({
                   )}
                 </>
               ) : (
-                <span className="muted">
-                  Nothing shielded in {bucketer.symbol} — shield some in your wallet first
-                </span>
+                <span className="muted">Nothing shielded in {bucketer.symbol} yet</span>
               )}
             </span>
           )}
@@ -386,10 +383,7 @@ export function DenominatePanel({
           * them mid-word, every word. */}
       <div aria-live="polite">
         {overBalance && (
-          <p className="err">
-            That is more than you hold shielded. The pool would reject it, so this
-            says so now rather than after you approve it.
-          </p>
+          <p className="err">More than you hold shielded.</p>
         )}
 
         {!overBalance && planError && <p className="err">{planError}</p>}
@@ -409,8 +403,7 @@ export function DenominatePanel({
           different problems and only one of them is the user's. */}
       {!legs && stalledPlan && !planError && (
         <p className="sm muted" aria-live="polite">
-          The contract is slow to answer — still waiting. Nothing is wrong with
-          the amount you typed.
+          The contract is slow to answer — nothing wrong with your amount.
         </p>
       )}
 
@@ -422,9 +415,9 @@ export function DenominatePanel({
         {bucketer.symbol}
       </p>
       <More label="Why only these?">
-        An amount that is not an exact sum of them is refused rather than
-        rounded. Rounding would produce a number nobody else is using, and a
-        unique amount is the easiest thing in the world to follow.
+        Anything that is not an exact sum of them is refused, not rounded.
+        Rounding would invent a number nobody else is using, and a unique amount
+        is the easiest thing in the world to follow.
       </More>
 
       {/* The bill, named in the same voice as the leaks. Everything else in this
@@ -433,8 +426,8 @@ export function DenominatePanel({
           watched 6 STRK leave after splitting 8.4. */}
       {legs && !preview && (
         <div className="notice notice-leak" role="note">
-          <strong>Gas comes out of your private balance</strong>, on top of the
-          amount above. Your wallet shows the exact figure before you sign.
+          <strong>Gas comes out of your private balance.</strong> Your wallet
+          shows the figure before you sign.
           <More label="How much, and why">
             Your wallet pays through a relayer, so your public address never
             appears as the payer, and bills the shielded side for it. That
@@ -481,14 +474,14 @@ export function DenominatePanel({
           any of it comes back as notes, so "which contract" is a fair question
           and the answer should be checkable before signing, not after. */}
       <p className="muted sm">
-        Routed through this contract — no owner, not upgradeable —{' '}
+        No owner, not upgradeable —{' '}
         <a
           className="tx-link mono"
           href={contractUrl(network, bucketer.address)}
           target="_blank"
           rel="noreferrer"
         >
-          read it on {network.explorer.replace(/^https:\/\//, '')} ↗
+          read the contract ↗
         </a>
       </p>
     </section>
@@ -517,13 +510,11 @@ function StageLine({
     case 'unverified':
       return (
         <div className="notice notice-leak" role="note">
-          <strong>The dry run could not tell us anything.</strong> Your wallet
-          returned <span className="mono">{stage.message}</span>, which is what it
-          says when it has no reason to give — not evidence the pool refused
-          anything. The split itself is valid: the anonymizer returned{' '}
-          {stage.legs.length} note{stage.legs.length === 1 ? '' : 's'} for this
-          amount. Signing will find out for certain, and costs the network fee
-          whether it works or not.
+          <strong>The dry run told us nothing.</strong> Your wallet returned{' '}
+          <span className="mono">{stage.message}</span> — no reason given, not a
+          refusal. The split is valid: {stage.legs.length} note
+          {stage.legs.length === 1 ? '' : 's'}. Signing settles it, and costs the
+          network fee either way.
         </div>
       );
     case 'awaiting-signature':
@@ -584,9 +575,9 @@ function AmountLede({
   if (crowd && crowd.people >= 2)
     return (
       <p className="lede-in">
-        <strong>{crowd.people} different addresses</strong> have already moved
-        exactly {shown} {bucketer.symbol} — so this one is not a giveaway. Most
-        amounts are: change a digit and watch.
+        <strong>{crowd.people} addresses</strong> have moved exactly {shown}{' '}
+        {bucketer.symbol} — so this one is not a giveaway. Most are: change a
+        digit and watch.
       </p>
     );
 
@@ -793,25 +784,24 @@ function CrowdVerdict({
   if (!worst)
     return (
       <span className="splitkey-note">
-        standard sizes — counting how many people use them…
+        counting who else uses these sizes…
       </span>
     );
 
   if (worst.people === 0)
     return (
       <span className="splitkey-note splitkey-note-warn">
-        Nobody else in the pool has moved <b>{label} {symbol}</b> recently. That leg
-        is distinctive on its own — a rounder amount splits into commoner sizes.
+        Nobody else has moved <b>{label} {symbol}</b> recently — that leg is
+        distinctive on its own. Try a rounder amount.
       </span>
     );
 
   return (
     <span className={`splitkey-note${worst.people === 1 ? ' splitkey-note-warn' : ''}`}>
-      Rarest size here is <b>{label} {symbol}</b>, used by{' '}
+      Rarest leg: <b>{label} {symbol}</b>, used by{' '}
       <b>
         {worst.people} {worst.people === 1 ? 'person' : 'people'}
-      </b>{' '}
-      in the pool's recent window
+      </b>
       {worst.people === 1 && ' — standard, but not yet a crowd'}.
     </span>
   );
