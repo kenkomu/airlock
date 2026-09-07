@@ -61,10 +61,14 @@ export const TOKENS: Record<string, { symbol: string; decimals: number }> = {
 /* Public endpoints, tried in order. A single provider rate-limits partway
    through a multi-page scan, which would otherwise report a wrong, quietly
    truncated anonymity set — the one number this app must never get wrong. */
+/* lava is gone from this list, not demoted. It is discontinued rather than
+   flaky — every request returns the same refusal — so leaving it in cost a
+   third of every scan's requests to a host that will never answer again, and
+   the retries pushed long scans towards the page cap that makes the panel
+   report a floor instead of a count. */
 const RPCS = [
-  'https://rpc.starknet.lava.build',
-  'https://api.cartridge.gg/x/starknet/mainnet',
   'https://starknet-rpc.publicnode.com',
+  'https://api.cartridge.gg/x/starknet/mainnet',
 ];
 
 /* Which endpoint a call starts from, advanced on every request.

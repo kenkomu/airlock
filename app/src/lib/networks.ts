@@ -72,7 +72,13 @@ const MAINNET_USDC =
 const MAINNET: Network = {
   chainId: SN_MAIN,
   name: 'Starknet',
-  rpcUrls: ['https://rpc.starknet.lava.build', 'https://starknet-rpc.publicnode.com'],
+  /* publicnode first because `providerFor` only ever builds from rpcUrls[0]
+     — there is no failover on this path, so position 0 is the whole story.
+     rpc.starknet.lava.build used to lead here and was discontinued: it now
+     answers every call with {"error":"This endpoint has been discontinued"},
+     which took the unconnected split preview on the live demo down with it.
+     Both of these were verified answering `plan` on the mainnet bucketer. */
+  rpcUrls: ['https://starknet-rpc.publicnode.com', 'https://api.cartridge.gg/x/starknet/mainnet'],
   pool: '0x040337b1af3c663e86e333bab5a4b28da8d4652a15a69beee2b677776ffe812a',
   bucketers: [
     /* STRK, 0.1-STRK rungs. STRK is 67% of recent mainnet pool deposits — the
