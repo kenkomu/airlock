@@ -8,7 +8,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { WalletSession } from '../hooks/useWallet';
 import type { Wallet } from '../lib/wallet';
-import { STRK20_MIN_READY, isBelow, isFirefox, rescanWallets, short } from '../lib/wallet';
+import { rescanWallets, short } from '../lib/wallet';
 import { NETWORKS } from '../lib/networks';
 import { IconWallet } from './Icons';
 import { AccountSheet } from './AccountSheet';
@@ -376,53 +376,14 @@ export function WalletNotice({ session }: { session: WalletSession }) {
       </p>
     );
 
-  if (conn.support.kind === 'unsupported') {
-    /* The version is the whole message. "This wallet can't do STRK20" leaves
-       someone with nowhere to go; "you have 5.31.0, you need 5.33.8" is a
-       thing they can act on in a minute. */
-    const v = conn.walletVersion;
-    const outdated = v !== undefined && isBelow(v, STRK20_MIN_READY);
-    return (
-      <p className="notice notice-blocked sm" role="status">
-        <strong>This wallet can't make private transfers yet.</strong>{' '}
-        {outdated && isFirefox() ? (
-          <>
-            You're on <strong>{conn.wallet.name} {v}</strong> and this needs{' '}
-            <strong>{STRK20_MIN_READY}</strong>, which Firefox's build does not
-            ship. Use Chrome, Brave or Edge.{' '}
-            <a
-              href="https://chromewebstore.google.com/detail/ready-wallet-formerly-arg/dlcobpjiigpikoobohmabehhmhfoodbb"
-              target="_blank"
-              rel="noreferrer"
-            >
-              Open this page in one of those
-            </a>{' '}
-            with Ready installed.
-          </>
-        ) : outdated ? (
-          <>
-            You're on <strong>{conn.wallet.name} {v}</strong>, and this needs{' '}
-            <strong>{STRK20_MIN_READY}</strong> or newer.{' '}
-            <a href="https://www.ready.co/" target="_blank" rel="noreferrer">
-              Update it
-            </a>{' '}
-            and reconnect.
-          </>
-        ) : (
-          <>
-            {v !== undefined && (
-              <>
-                You're on {conn.wallet.name} <span className="mono">{v}</span>.{' '}
-              </>
-            )}
-            Private transfers need Ready {STRK20_MIN_READY} or newer; other
-            wallets are still adding support.
-          </>
-        )}{' '}
-        <span className="muted">({conn.support.message})</span>
-      </p>
-    );
-  }
+  /* No branch for `unsupported` here, deliberately.
+   *
+   * It used to be the biggest thing on the page: a red banner naming the
+   * wallet's own error string, up from the moment you connected. A page-wide
+   * warning is the wrong shape for a condition that only matters when you press
+   * a button, and it was read once and then ignored for the rest of the
+   * session. `WalletGap` says the same thing at the two places you can act —
+   * the split button and the shield form — and nowhere else. */
 
   if (conn.support.kind === 'unregistered')
     return (

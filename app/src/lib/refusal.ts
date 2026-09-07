@@ -68,11 +68,11 @@ export function signatureMessage(e: unknown): string {
   /* The wallet cannot do STRK20 at all, and says so in wire protocol:
      "Unknown request type: wallet_strk20InvokeTransaction".
 
-     A notice at the top of the page already explains this in English and names
-     the version needed — but the notice is a page away from the button, and
-     this string lands directly under it, so the protocol name is what gets
-     read. Same fault as NOT_REGISTERED: one condition, two voices, and the
-     unreadable one wins.
+     The panels head this off before the button is pressed — `WalletGap` names
+     the version you have and the one you need, right where the control would
+     be. This is the backstop for the paths that reach a signature anyway, and
+     it still has to be English rather than the wire string: same fault as
+     NOT_REGISTERED, one condition in two voices, and the unreadable one wins.
 
      Note this is the same predicate the dry run uses one step earlier. There
      it means "skip the dry run and carry on", which is right — a wallet that

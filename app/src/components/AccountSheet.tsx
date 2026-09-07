@@ -158,7 +158,14 @@ export function AccountSheet({
                 <span className="wcard-bal-sym">{lead.symbol}</span>
               </>
             ) : (
-              <span className="wcard-bal-none">Nothing shielded yet</span>
+              /* "Nothing shielded" is a finding. For a wallet that could not
+                 be asked it is a fabrication, and the card is the most
+                 believed number on the page. */
+              <span className="wcard-bal-none">
+                {conn.support.kind === 'unsupported'
+                  ? 'Private balance unreadable'
+                  : 'Nothing shielded yet'}
+              </span>
             )}
           </div>
           <span className="wcard-bal-k">Private balance</span>
@@ -193,9 +200,11 @@ export function AccountSheet({
           />
         )}
 
-        {!lead && conn.support.kind !== 'unregistered' && (
-          <p className="muted sm">Nothing shielded.</p>
-        )}
+        {!lead &&
+          conn.support.kind !== 'unregistered' &&
+          conn.support.kind !== 'unsupported' && (
+            <p className="muted sm">Nothing shielded.</p>
+          )}
 
         {/* Directly under the finding it answers. Someone who has just read
             "Nothing shielded yet" should not have to go looking for the

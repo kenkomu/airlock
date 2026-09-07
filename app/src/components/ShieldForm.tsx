@@ -17,6 +17,7 @@ import { shield, type ShieldStage } from '../lib/shield';
 import { formatUnits, toBaseUnits, type Connection, type ShieldedBalance } from '../lib/wallet';
 import { txUrl } from '../lib/networks';
 import { IconLock } from './Icons';
+import { WalletGap } from './WalletGap';
 
 export function ShieldForm({
   conn,
@@ -43,10 +44,28 @@ export function ShieldForm({
   const busy =
     stage.at === 'simulating' || stage.at === 'awaiting-signature' || stage.at === 'submitted';
 
-  /* Nothing to shield into a pool from an account with no public funds, and
-     nothing to say about a wallet that has already told us it cannot. The
-     notice at the top of the page covers that case in full. */
-  if (conn.support.kind === 'unsupported' || !conn.network) return null;
+  if (!conn.network) return null;
+
+  /* A wallet that cannot speak STRK20 gets the reason instead of the form.
+  
+     It used to get nothing at all, on the grounds that the banner across the
+     top of the page covered it. That banner is gone — it warned everyone, on
+     arrival, about a condition that only matters here — so this is now the
+     place the question gets answered. Someone holding public funds has opened
+     the one panel that offers to shield them and found no control; silence is
+     the worst possible answer to that. Shielding goes through
+     `strk20InvokeTransaction` like the split does, so there is genuinely no
+     form to show. */
+  if (conn.support.kind === 'unsupported')
+    return (
+      <section className="acct-group shield">
+        <div className="acct-group-h">
+          <IconLock />
+          <strong>Shield funds</strong>
+        </div>
+        <WalletGap conn={conn} />
+      </section>
+    );
 
   /* An unregistered account gets an explanation, not a form.
   

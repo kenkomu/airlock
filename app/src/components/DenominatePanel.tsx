@@ -14,6 +14,7 @@ import { denominate, format, type Stage } from '../lib/denominate';
 import { NETWORKS, SN_MAIN, bucketerFor, contractUrl, txUrl, type Bucketer, type Network } from '../lib/networks';
 import { providerFor, short, toBaseUnits } from '../lib/wallet';
 import { recordSplit } from '../lib/history';
+import { WalletGap } from './WalletGap';
 import { crowdAt, type SizeCount } from '../lib/pool';
 
 /* Measured, not estimated. On the first mainnet split
@@ -261,6 +262,14 @@ export function DenominatePanel({
     );
   }
 
+  /* The wallet has already told us it cannot speak STRK20 — the balance read
+     came back "unknown request type". Held back until the amount field has
+     something in it: a warning shown to everyone on arrival is a banner, which
+     is what this replaced. Once someone has typed a figure they are trying to
+     do the thing, and that is the moment it is worth saying. */
+  const walletCannot = conn !== null && conn.support.kind === 'unsupported';
+  const engaged = text.trim() !== '';
+
   const busy =
     stage.at !== 'idle' &&
     stage.at !== 'done' &&
@@ -459,6 +468,12 @@ export function DenominatePanel({
         <button className="btn btn-primary btn-lg" onClick={onConnect} type="button">
           <IconLock /> Connect a wallet to do this for real
         </button>
+      ) : walletCannot && engaged && conn ? (
+        /* In place of the button, not above it. A control whose only possible
+           outcome is the error underneath it is worse than no control — the
+           press costs a wallet round trip and teaches nothing the notice does
+           not already say. */
+        <WalletGap conn={conn} />
       ) : (
         <button
           className="btn btn-primary btn-lg"

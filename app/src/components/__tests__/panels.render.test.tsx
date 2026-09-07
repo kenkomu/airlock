@@ -20,6 +20,7 @@ import { ConnectWallet } from '../ConnectWallet';
 import { ShieldForm } from '../ShieldForm';
 import type { WalletSession } from '../../hooks/useWallet';
 import type { EvmIdentitySession } from '../../hooks/useEvmIdentity';
+import { STRK20_MIN_READY } from '../../lib/wallet';
 
 const noWallet: WalletSession = {
   state: { phase: 'disconnected' },
@@ -185,12 +186,19 @@ describe('ShieldForm', () => {
     expect(renderToStaticMarkup(<ShieldForm conn={conn} pub={[]} onShielded={() => {}} />)).toBe('');
   });
 
-  it('stays out of the way of a wallet that cannot do STRK20', () => {
-    /* The notice at the top of the page explains that case in full, and a
-       button that cannot work is worse than no button. */
+  it('explains itself to a wallet that cannot do STRK20, rather than vanishing', () => {
+    /* A button that cannot work is worse than no button — but no button and no
+       reason is worse than both. This is the only place the condition is now
+       said, so it has to say it, and without the wire string that used to be
+       printed alongside. */
     const old = { ...conn, support: { kind: 'unsupported' as const, message: 'Unknown request type' } };
-    expect(
-      renderToStaticMarkup(<ShieldForm conn={old as never} pub={[strk]} onShielded={() => {}} />),
-    ).toBe('');
+    const html = renderToStaticMarkup(
+      <ShieldForm conn={old as never} pub={[strk]} onShielded={() => {}} />,
+    );
+    expect(html).toContain('make private transfers yet');
+    expect(html).toContain(STRK20_MIN_READY);
+    expect(html).not.toContain('Unknown request type');
+    /* And no amount field, since there is nothing it could submit. */
+    expect(html).not.toContain('Amount to shield');
   });
 });
