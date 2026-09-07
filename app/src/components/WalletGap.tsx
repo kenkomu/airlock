@@ -58,3 +58,22 @@ export function WalletGap({ conn }: { conn: Connection }) {
     </p>
   );
 }
+
+/* The account exists and the wallet speaks STRK20 — the pool has just never
+ * met it. Same treatment as `WalletGap` and for the same reason: the panel
+ * knows this before a button is pressed, so offering one that can only fail is
+ * a wasted round trip that ends in the wallet's own UNKNOWN_ERROR.
+ *
+ * Deliberately shorter than the message it replaces, which ran to four
+ * sentences and re-explained the wallet API. What the reader needs is the one
+ * action, and that it costs nothing.
+ */
+export function NotRegisteredGap({ conn }: { conn: Connection }) {
+  return (
+    <p className="notice notice-leak sm" role="status">
+      <strong>{conn.wallet.name} hasn't registered this account yet.</strong>{' '}
+      Shield once from its own privacy screen — no dapp can do it — then come
+      back. Nothing to sign here, and nothing spent.
+    </p>
+  );
+}

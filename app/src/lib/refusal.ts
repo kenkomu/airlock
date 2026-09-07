@@ -84,6 +84,23 @@ export function signatureMessage(e: unknown): string {
       `recognise the request. Ready ${STRK20_MIN_READY} or newer supports it, on ` +
       'Chrome, Brave or Edge. Nothing was signed and nothing was spent.'
     );
+  /* The wallet refused and had nothing to say.
+  
+     `isNamedRefusal` already treats UNKNOWN_ERROR as "no evidence" one step
+     earlier, in the dry run. It was never applied here, so a wallet that
+     declined at signature time put its own string on screen verbatim — Ready
+     prints "An error occurred (UNKNOWN_ERROR)", which tells the user nothing
+     they can act on and reads like the app broke.
+  
+     There is nothing to diagnose from it, so this does not pretend to. It says
+     what is certain — nothing was signed, nothing was spent — and names the
+     one cause common enough to be worth checking. */
+  if (/unknown[_ ]error/i.test(m))
+    return (
+      'Your wallet refused and gave no reason. Nothing was signed and nothing ' +
+      'was spent. If this account has never shielded, register it in your ' +
+      'wallet first — that is the usual cause.'
+    );
   return m;
 }
 

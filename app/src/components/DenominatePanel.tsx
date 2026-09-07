@@ -14,7 +14,7 @@ import { denominate, format, type Stage } from '../lib/denominate';
 import { NETWORKS, SN_MAIN, bucketerFor, contractUrl, txUrl, type Bucketer, type Network } from '../lib/networks';
 import { providerFor, short, toBaseUnits } from '../lib/wallet';
 import { recordSplit } from '../lib/history';
-import { WalletGap } from './WalletGap';
+import { NotRegisteredGap, WalletGap } from './WalletGap';
 import { crowdAt, type SizeCount } from '../lib/pool';
 
 /* Measured, not estimated. On the first mainnet split
@@ -268,6 +268,11 @@ export function DenominatePanel({
      is what this replaced. Once someone has typed a figure they are trying to
      do the thing, and that is the moment it is worth saying. */
   const walletCannot = conn !== null && conn.support.kind === 'unsupported';
+  /* Known before anything is pressed: the balance read came back NOT_REGISTERED.
+     Pressing Split anyway reached the wallet and came back "An error occurred
+     (UNKNOWN_ERROR)" — a round trip that costs a signature prompt and teaches
+     nothing. */
+  const notRegistered = conn !== null && conn.support.kind === 'unregistered';
   const engaged = text.trim() !== '';
 
   const busy =
@@ -474,6 +479,8 @@ export function DenominatePanel({
            press costs a wallet round trip and teaches nothing the notice does
            not already say. */
         <WalletGap conn={conn} />
+      ) : notRegistered && engaged && conn ? (
+        <NotRegisteredGap conn={conn} />
       ) : (
         <button
           className="btn btn-primary btn-lg"
